@@ -1146,3 +1146,80 @@ body.nilo-redesign-v2 .section-title p { color:var(--ref-muted) !important; font
   body.nilo-redesign-v2 .central-hero-actions { display:grid !important; grid-template-columns:1fr !important; }
   body.nilo-redesign-v2 .operation-pulse-grid { grid-template-columns:1fr !important; }
 }
+
+/* Órbita V4 • contenção de largura e grade responsiva.
+   Evita que o cabeçalho da seção e os estados vazios colapsem em
+   uma coluna estreita quando camadas visuais antigas também estão ativas. */
+html body #view,
+html body #view > *,
+html body #view .v11-separated-section,
+html body #view .v11-section-card,
+html body #view .section-head,
+html body #view .section-title,
+html body #view .section-title > div,
+html body #view .operation-card-grid,
+html body #view .empty-state {
+  min-width: 0 !important;
+  max-width: none !important;
+}
+
+html body #view .v11-separated-section,
+html body #view .v11-section-card {
+  width: 100% !important;
+}
+
+html body #view .v11-section-card {
+  overflow: hidden !important;
+}
+
+html body #view .section-head {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: start !important;
+  width: 100% !important;
+}
+
+html body #view .section-title {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  align-items: flex-start !important;
+}
+
+html body #view .section-title > div {
+  flex: 1 1 auto !important;
+  width: auto !important;
+}
+
+html body #view .section-title h2,
+html body #view .section-title p {
+  width: auto !important;
+  max-width: none !important;
+  overflow-wrap: normal !important;
+}
+
+html body #view .section-actions {
+  justify-self: end !important;
+  min-width: max-content !important;
+  width: auto !important;
+}
+
+html body #view .operation-card-grid {
+  display: grid !important;
+  width: 100% !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+@media (max-width: 1180px) {
+  html body #view .operation-card-grid { grid-template-columns: 1fr !important; }
+}
+
+@media (max-width: 680px) {
+  html body #view .section-head { grid-template-columns: 1fr !important; }
+  html body #view .section-actions {
+    justify-self: stretch !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  html body #view .section-actions .btn { width: 100% !important; }
+}
