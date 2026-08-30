@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 100907)
-Total output lines: 4792
-
 (() => {
   // V8: tema visual de foco médio-escuro, com gráficos legíveis e cores reduzidas.
   if (typeof Chart !== 'undefined') {
@@ -2817,7 +2814,44 @@ Total output lines: 4792
     const dates=[0,1,2,3].map(back=>{const d=new Date();d.setDate(d.getDate()-back);return localDateISO(d)}), created=[];
     for(let i=0;i<10;i++){ const date=dates[i%dates.length], fee=i%3===0?9.99:6.99, nb=nbs[i%nbs.length]; const d={id:uid('del'),rootId:'',parentId:'',attemptNo:1,date,orderNo:String(i+1),coupon:`TREINO-${String(i+1).padStart(3,'0')}`,docNo:`DOC-${String(1001+i)}`,cashierNo:String((i%3)+1),customerName:i%2===0?`CLIENTE EXEMPLO ${i+1}`:'',customerPhone:i%2===0?`( 66 ) 9 9999-${String(1000+i)}`:'',purchaseTime:`${String(9+(i%7)).padStart(2,'0')}:${i%2?'20':'05'}`,neighborhoodId:nb.id,address:`Rua Exemplo ${i+1}`,addressNumber:String(100+i),addressComplement:'',addressReference:i%2?'Próximo à praça':'',priority:i===0,fee,driverId:'',vehicleId:'',cycleId:'',departureTime:'',finalizationTime:'',returnTime:'',status:'Na loja',scheduledDate:'',scheduledTime:'',scheduleNotes:'',scheduleKind:'',reasonId:'',reasonText:'',nextAction:'',notes:'Registro criado automaticamente para treinamento.',returnedUndelivered:false,returnReasonId:'',returnReasonText:'',refundAmount:0,refundDate:'',withdrawalDate:'',withdrawalTime:'',createdAt:nowISO(),updatedAt:nowISO(),mode:'training',history:[]}; d.rootId=d.id; if(i===7){d.status='Programada';d.scheduledDate=dates[0];d.scheduledTime='15:30';d.scheduleNotes='Ligar antes da entrega.';d.scheduleKind='Programada';d.history.push({id:uid('evt'),type:'scheduled',from:d.date,to:d.scheduledDate,scheduledTime:d.scheduledTime,scheduleNotes:d.scheduleNotes,at:nowISO()});} if(i===8){d.status='Devolvida';d.reasonId='ENDERECO_ERRADO';d.returnedUndelivered=true;d.returnReasonId='ENDERECO_ERRADO';} state.deliveries.push(d);created.push(d); }
     const cycleDeliveries=created.slice(0,3), c={id:uid('cyc'),code:'CIC-TREINO-001',date:dates[0],vehicleId:veh.id,driverId:emp.id,departureTime:'09:30',returnTime:'10:40',notes:'Ciclo de treinamento.',routeDeliveryIds:routeSortDeliveries(created.slice(0,3)).map(d=>d.id),routeGeneratedAt:nowISO(),routeStrategy:'priority_neighborhood_google_maps',createdAt:nowISO(),updatedAt:nowISO(),mode:'training'}; state.cycles.push(c); const trainingTrack=ensureRouteTrack(c);trainingTrack.status='completed';trainingTrack.startedAt=`${dates[0]}T09:30:00`;trainingTrack.endedAt=`${dates[0]}T10:40:00`;trainingTrack.points=[{lat:-14.6752,lng:-52.3521,accuracy:8,speed:null,heading:null,at:`${dates[0]}T09:30:00`},{lat:-14.6708,lng:-52.3462,accuracy:10,speed:null,heading:null,at:`${dates[0]}T09:47:00`},{lat:-14.6669,lng:-52.3514,accuracy:9,speed:null,heading:null,at:`${dates[0]}T10:06:00`},{lat:-14.6735,lng:-52.3581,accuracy:11,speed:null,heading:null,at:`${dates[0]}T10:24:00`},{lat:-14.6752,lng:-52.3521,accuracy:8,speed:null,heading:null,at:`${dates[0]}T10:40:00`}];trainingTrack.distanceKm=2.65;trainingTrack.lastPointAt=trainingTrack.points.at(-1).at; cycleDeliveries.forEach((d,idx)=>{d.cycleId=c.id;d.vehicleId=veh.id;d.driverId=emp.id;d.departureTime='09:30';d.finalizationTime=`10:${String(5+idx*8).padStart(2,'0')}`;d.returnTime='10:40';d.status='Finalizada';});
-    state.odometerLogs.push({id:uid('odo'),date:dates[0],vehicleId:veh.id,kmStart:10000,kmEnd:10038,notes:'T…907 tokens truncated…      <label class="span-2">Ponto de saída e retorno da rota<input id="ruleRouteOrigin" value="${attr(routeOriginLabel())}" placeholder="Ex.: Nilo Supermercado, Nova Xavantina - MT" /></label>
+    state.odometerLogs.push({id:uid('odo'),date:dates[0],vehicleId:veh.id,kmStart:10000,kmEnd:10038,notes:'Treinamento',createdAt:nowISO(),updatedAt:nowISO(),mode:'training'});
+    const fuel=state.costCategories.find(x=>x.name==='Combustível'); state.costs.push({id:uid('cost'),date:dates[0],time:'11:00',vehicleId:veh.id,categoryId:fuel?.id||'',description:'Abastecimento de treinamento',value:80,km:10038,supplier:'Posto Exemplo',receiptNo:'TREINO',responsibleId:emp.id,notes:'Dado de treinamento.',createdAt:nowISO(),updatedAt:nowISO(),mode:'training'});
+    await saveState('Dados de treinamento de exemplo criados'); toast('Dados de treinamento criados.','success'); render();
+  }
+  async function clearTrainingData() { if(currentMode()!=='training')return; if(!confirm('Apagar TODOS os dados de treinamento? A operação real não será afetada.'))return; if(activeRouteCycleId)clearLocalRouteWatcher(); for(const key of ['deliveries','cycles','routeTracks','odometerLogs','costs']) state[key]=state[key].filter(x=>(x.mode||'production')!=='training'); state.trash=state.trash.filter(x=>(x.mode||'production')!=='training'); await saveState('Dados de treinamento limpos'); toast('Treinamento limpo.','success'); render(); }
+
+  function renderSettings() {
+    const tabs = [
+      ['vehicles','Veículos'],['neighborhoods','Bairros'],['employees','Colaboradores'],['costCategories','Categorias de custo'],['reasons','Motivos'],['rules','Regras'],['data','Dados']
+    ];
+    $('#view').innerHTML = `
+      <div class="settings-tabs">${tabs.map(([id,label])=>`<button class="tab-btn ${configTab===id?'active':''}" data-config-tab="${id}">${label}</button>`).join('')}</div>
+      <section class="settings-grid">
+        <aside class="card settings-side">
+          <h3>Cadastros mestres</h3><p>Itens desativados deixam de aparecer em novos lançamentos, mas continuam nos relatórios e no histórico.</p>
+          <div class="settings-stat"><span>Veículos ativos</span><strong>${state.vehicles.filter(x=>x.active).length}</strong></div>
+          <div class="settings-stat"><span>Bairros ativos</span><strong>${state.neighborhoods.filter(x=>x.active).length}</strong></div>
+          <div class="settings-stat"><span>Colaboradores ativos</span><strong>${state.employees.filter(x=>x.active).length}</strong></div>
+          <div class="settings-stat"><span>Entregas registradas</span><strong>${scoped(state.deliveries).length}</strong></div>
+        </aside>
+        <article class="card section-card" id="settingsContent">${settingsContent()}</article>
+      </section>
+    `;
+    $$('.tab-btn').forEach(btn=>btn.addEventListener('click',()=>{configTab=btn.dataset.configTab;renderSettings();}));
+    bindSettingsActions();
+  }
+
+  function settingsContent() {
+    if (configTab === 'rules') {
+      return `${sectionHeader('⚙','Regras operacionais','Defina o expediente e os padrões máximos da entrega.')}
+        <div class="form-grid">
+          <label>Início expediente<input id="ruleWorkStart" type="time" value="${state.settings.workStart}" /></label>
+          <label>Início almoço<input id="ruleLunchStart" type="time" value="${state.settings.lunchStart}" /></label>
+          <label>Fim almoço<input id="ruleLunchEnd" type="time" value="${state.settings.lunchEnd}" /></label>
+          <label>Fim expediente<input id="ruleWorkEnd" type="time" value="${state.settings.workEnd}" /></label>
+          <label>Limite compra → saída (minutos)<input id="ruleDelay" type="number" min="1" value="${state.settings.delayMinutes}" /></label>
+          <label>Limite compra → cliente (minutos)<input id="ruleCompletionLimit" type="number" min="1" value="${state.settings.completionLimitMinutes || 210}" /></label>
+          <label class="span-2">Ponto de saída e retorno da rota<input id="ruleRouteOrigin" value="${attr(routeOriginLabel())}" placeholder="Ex.: Nilo Supermercado, Nova Xavantina - MT" /></label>
           <label class="span-2">Cidade usada pelo Google Maps<input id="ruleRouteCity" value="${attr(routeCityLabel())}" placeholder="Ex.: Nova Xavantina - MT" /></label>
           <div class="full form-note"><strong>Padrão 1:</strong> compra até a saída, em tempo corrido (padrão atual: 2h).<br><strong>Padrão 2:</strong> compra até a finalização na casa do cliente, também em tempo corrido (padrão atual: 3h30). Exemplo: compra às 10:00 e saída às 12:00 deixam 1h30 para a entrega.</div>
           <div class="full form-note"><strong>Roteirização:</strong> o ponto de saída também será o retorno do ciclo. Em cada bairro, configure a ordem operacional para evitar cruzamentos desnecessários.</div>
