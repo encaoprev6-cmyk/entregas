@@ -1,11 +1,11 @@
-const CACHE_NAME = 'orbita-entregas-v8-layout-operacao';
+const CACHE_NAME = 'orbita-entregas-v9-operacao';
 const APP_SHELL = [
   './',
   './index.html',
   './styles.css?v=15.0.0',
   './nilo-layout-v15.css?v=15.0.0',
   './ui-stable-v19.css?v=19.0.0',
-  './app.js?v=15.1.0',
+  './app.js?v=15.1.1',
   './route-view-stable-v19.js?v=19.0.0',
   './manifest.webmanifest',
   './favicon-v33.png?v=35.0.0',

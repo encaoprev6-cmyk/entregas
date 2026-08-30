@@ -7,7 +7,7 @@
   }
   'use strict';
 
-  const APP_VERSION = '15.1.0';
+  const APP_VERSION = '15.1.1';
   const OFFICIAL_HISTORY_START = '2026-09-01';
   const DB_NAME = 'controle_entregas_nx';
   // V2 cria a store principal para instalações que já possuem um banco
@@ -767,7 +767,7 @@
 
   function initPWA() {
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-      navigator.serviceWorker.register('./sw.js?v=17.0.0').catch(console.warn);
+      navigator.serviceWorker.register('./sw.js?v=18.0.0').catch(console.warn);
     }
     window.addEventListener('beforeinstallprompt', (event) => {
       event.preventDefault();
@@ -2021,7 +2021,7 @@
       <section class="v11-separated-section" id="todayCyclesSection">
         <div class="v11-section-number">2</div>
         <article class="card section-card v11-section-card">
-          ${sectionHeader('↻','Saídas, ciclos e roteiros','As entregas prioritárias ficam primeiro; as demais seguem a sequência dos bairros e podem ser abertas no Google Maps.', `<button class="btn primary small" data-action="start-cycle">🚚 Montar nova saída</button>`)}
+          ${sectionHeader('↻','Saídas, ciclos e roteiros','As entregas prioritárias ficam primeiro; as demais seguem a sequência operacional dos bairros.', `<button class="btn primary small" data-action="start-cycle">🚚 Montar nova saída</button>`)}
           ${activeCycleCards(cycles)}
         </article>
       </section>
