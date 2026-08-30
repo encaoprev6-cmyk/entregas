@@ -10,7 +10,9 @@
   const APP_VERSION = '15.0.0';
   const OFFICIAL_HISTORY_START = '2026-09-01';
   const DB_NAME = 'controle_entregas_nx';
-  const DB_VERSION = 1;
+  // V2 cria a store principal para instalações que já possuem um banco
+  // antigo com o mesmo nome, sem apagar o conteúdo local existente.
+  const DB_VERSION = 2;
   const STORE_NAME = 'app_state';
   const STATE_KEY = 'main';
   const PRE_UPDATE_BACKUP_KEY = 'pre_update_backup';
