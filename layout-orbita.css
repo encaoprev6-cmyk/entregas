@@ -1168,6 +1168,17 @@ html body #view .v11-section-card {
   width: 100% !important;
 }
 
+/* No redesign V2 o marcador lateral é ocultado; a seção precisa voltar a
+   ser um bloco único para o card não cair na primeira coluna de 44px. */
+html body.nilo-redesign-v2 #view .v11-separated-section {
+  display: block !important;
+  grid-template-columns: none !important;
+}
+
+html body.nilo-redesign-v2 #view .v11-section-number {
+  display: none !important;
+}
+
 html body #view .v11-section-card {
   overflow: hidden !important;
 }

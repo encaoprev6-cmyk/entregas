@@ -1,4 +1,4 @@
-const CACHE_NAME = 'orbita-entregas-v7-layout-operacao';
+const CACHE_NAME = 'orbita-entregas-v8-layout-operacao';
 const APP_SHELL = [
   './',
   './index.html',
@@ -13,7 +13,7 @@ const APP_SHELL = [
   './operational-fixes-v31.js?v=31.0.0',
   './nilo-approved-v33-exact.css?v=35.0.0',
   './nilo-approved-v33-screens.css?v=35.0.0',
-  './layout-orbita.css?v=4.0.0',
+  './layout-orbita.css?v=4.1.0',
   './nilo-approved-v33.js?v=38.0.0',
   './nilo-approved-v33-screens.js?v=35.0.0',
   './logo-nilo-novo.png?v=38.0.0',

@@ -767,7 +767,7 @@
 
   function initPWA() {
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-      navigator.serviceWorker.register('./sw.js?v=16.0.0').catch(console.warn);
+      navigator.serviceWorker.register('./sw.js?v=17.0.0').catch(console.warn);
     }
     window.addEventListener('beforeinstallprompt', (event) => {
       event.preventDefault();
