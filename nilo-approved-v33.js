@@ -1,18 +1,19 @@
 /**
- * NILO ENTREGAS • V35.0.0 • ARTES APROVADAS EXATAS
+ * NILO ENTREGAS • V36.0.0 • IDENTIDADE NILO ATUALIZADA
  * ------------------------------------------------------------
  * Implementa o pacote visual aprovado (desktop + mobile) sem
  * gravar dados, sem alterar IndexedDB/Supabase e sem remover ações.
  */
 (() => {
   'use strict';
-  const VERSION = '35.0.0';
+  const VERSION = '36.0.0';
   const q = (s,r=document) => r.querySelector(s);
   const qa = (s,r=document) => [...r.querySelectorAll(s)];
   const A = {
-    nilo:'logo-nilo-aprovada.png?v=35.0.0',
+    nilo:'logo-nilo-novo.png?v=36.0.0',
     triela:'logo-triela-aprovada.png?v=35.0.0',
-    mascot:'mascote-nilo-aprovado.png?v=35.0.0'
+    mascot:'mascote-nilo-novo.jpeg?v=36.0.0',
+    mascotAvatar:'mascote-nilo-rosto-novo.jpeg?v=36.0.0'
   };
 
   const icons = {
@@ -143,7 +144,7 @@
     }
     if(!q('.ap-mobile-brand',top)){
       const m=document.createElement('div'); m.className='ap-mobile-brand';
-      m.innerHTML=`<div class="ap-mobile-brand-row"><div class="ap-mobile-brand-logos"><img class="ap-mobile-nilo" src="${A.nilo}" alt="Nilo"><span class="ap-mobile-brand-sep"></span><img class="ap-mobile-triela" src="${A.triela}" alt="Triela"></div><div class="ap-mobile-tools"><span class="ap-mobile-bell">♧</span><img class="ap-mobile-avatar" src="${A.mascot}" alt="Mascote"></div></div><div class="ap-mobile-greeting"><strong>Olá, Prevenção! 👋</strong><span>Bem-vindo ao Sistema de Entregas</span><small>Ambiente real</small></div>`;
+      m.innerHTML=`<div class="ap-mobile-brand-row"><div class="ap-mobile-brand-logos"><img class="ap-mobile-nilo" src="${A.nilo}" alt="Nilo Supermercado"><span class="ap-mobile-brand-sep"></span><img class="ap-mobile-triela" src="${A.triela}" alt="Triela"></div><div class="ap-mobile-tools"><span class="ap-mobile-bell">♧</span><img class="ap-mobile-avatar" src="${A.mascotAvatar}" alt="Mascote Nilo"></div></div><div class="ap-mobile-greeting"><strong>Olá, Prevenção! 👋</strong><span>Bem-vindo ao Sistema de Entregas</span><small>Ambiente real</small></div>`;
       top.prepend(m);
     }
   }
