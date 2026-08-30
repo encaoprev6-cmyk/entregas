@@ -36,7 +36,7 @@
   };
 
   const titleMap = {
-    today:['Central Operacional','O que está acontecendo agora, o que precisa de ação e qual é o próximo passo.'],
+    today:['Central de Operações','O que está acontecendo agora, o que precisa de ação e qual é o próximo passo.'],
     deliveries:['Entregas & Programadas','Registre novas compras, acompanhe entregas de hoje e visualize programações futuras.'],
     scheduled:['Entregas & Programadas','Registre novas compras, acompanhe entregas de hoje e visualize programações futuras.'],
     pending:['Entregas & Programadas','Pendências, devoluções e próximas ações da operação.'],
@@ -53,7 +53,7 @@
   };
 
   const labelMap = {
-    today:'Central Operacional',deliveries:'Entregas',scheduled:'Programadas',pending:'Pendências',cycles:'Rotas & Ciclos',
+    today:'Central de Operações',deliveries:'Entregas',scheduled:'Programadas',pending:'Pendências',cycles:'Rotas & Ciclos',
     'route-history':'Histórico de rotas',odometer:'Quilometragem & Frota',dashboard:'Desempenho',reports:'Relatórios',
     neighborhoods:'Análise por bairro',costs:'Custos',trace:'Pesquisar entregas',settings:'Administração & Cadastros',trash:'Lixeira'
   };
@@ -104,7 +104,7 @@
     const byView=new Map(buttons.map(b=>[b.dataset.view,b]));
     buttons.forEach(b=>{
       const v=b.dataset.view; const lab=menuLabel(b);
-      const visibleLabels={today:'Central Operacional',deliveries:'Entregas',cycles:'Roteirização',trace:'Pesquisar entregas',dashboard:'Desempenho',reports:'Relatórios',odometer:'Quilometragem & Frota',settings:'Administração & Cadastros'};
+      const visibleLabels={today:'Central de Operações',deliveries:'Entregas',cycles:'Roteirização',trace:'Pesquisar entregas',dashboard:'Desempenho',reports:'Relatórios',odometer:'Quilometragem & Frota',settings:'Administração & Cadastros'};
       if(lab && visibleLabels[v]) setText(lab,visibleLabels[v]);
       const ico=q('.nav-ico',b); if(ico && icons[v]) ico.innerHTML=icons[v];
       b.title=visibleLabels[v]||labelMap[v]||lab?.textContent||v||'Menu'; b.remove();
