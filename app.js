@@ -1927,11 +1927,29 @@
     const recommendation = operationRecommendation(date, deliveries, cycles, issues, odometers);
     const closure = dayClosure(date);
     const closeChecks = dayClosingChecks(date);
+    const deliveredToday = purchases.filter(root => rootWasFinalized(root, deliveries)).length;
+    const progressRate = Math.round(percentage(deliveredToday, purchases.length));
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
 
     $('#view').innerHTML = `
       <section class="v11-operation-hero ${closure?'closed-day':''}">
-        <div class="v11-operation-hero-copy"><span class="eyebrow">CENTRAL DE OPERAÇÃO</span><h2>${closure?'Dia encerrado':'O que está acontecendo agora'}</h2><p>${closure?`Encerrado em ${dateTimeBR(closure.closedAt)}. Correções continuam permitidas e ficam no histórico.`:'Abra esta tela e veja imediatamente o que aguarda saída, o que está em rota e o que precisa de ação.'}</p></div>
+        <div class="v11-operation-hero-copy">
+          <div class="central-hero-meta"><span class="central-team-chip">Equipe de prevenção</span><span class="central-alert-chip">● Precisamos agir</span></div>
+          <span class="eyebrow">CENTRAL DE OPERAÇÕES</span>
+          <h2>${closure?'Dia encerrado':`${greeting}, Prevenção! <span class="central-wave">👋</span>`}</h2>
+          <div class="central-hero-insight"><b>✣</b><span>${esc(recommendation.title)}</span><small>${esc(recommendation.text)}</small></div>
+          <div class="central-hero-actions"><button class="btn primary" data-action="new-delivery">＋ Nova entrega</button><button class="btn secondary" data-action="start-cycle">⌘ Iniciar ciclo</button><button class="btn secondary" data-action="${closure?'reopen-day':'close-day'}">${closure?'↺ Reabrir dia':'✓ Finalizar operação'}</button></div>
+        </div>
+        <div class="central-hero-mascot"><img src="mascote-nilo-novo.jpeg?v=38.0.0" alt="Mascote Nilo em movimento"></div>
         <div class="v11-operation-hero-actions"><div class="today-date-chip">${dateBR(date)}</div><button class="btn ${closure?'secondary':'primary'}" data-action="${closure?'reopen-day':'close-day'}">${closure?'↺ Reabrir dia':'✓ Encerrar operação do dia'}</button></div>
+      </section>
+
+      <section class="central-performance-strip">
+        <div class="central-progress-ring" style="--progress:${progressRate}"><strong>${progressRate}%</strong><small>↗</small></div>
+        <div class="central-performance-copy"><span>DESEMPENHO DO DIA</span><strong>${deliveredToday} de ${purchases.length} entregas realizadas</strong><small>Clique para ver o impacto das entregas atrasadas.</small></div>
+        <div class="central-conversation"><strong>Conversando com a operação</strong><span>Quando uma entrega atrasa, o índice fica em atenção e o mascote muda de humor automaticamente.</span></div>
+        <strong class="central-late-count">${critical.length + warning.length} atrasadas</strong>
       </section>
 
       <section class="operation-pulse-grid">
