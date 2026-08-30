@@ -5,7 +5,7 @@ const APP_SHELL = [
   './styles.css?v=15.0.0',
   './nilo-layout-v15.css?v=15.0.0',
   './ui-stable-v19.css?v=19.0.0',
-  './app.js?v=15.0.0',
+  './app.js?v=15.1.0',
   './route-view-stable-v19.js?v=19.0.0',
   './manifest.webmanifest',
   './favicon-v33.png?v=35.0.0',
