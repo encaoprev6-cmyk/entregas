@@ -83,7 +83,7 @@ function openRegister(){(q('#quickNewDeliveryBtn')||q('#mobileNewDeliveryBtn'))?
 function activeLayer(){return q('#apApprovedScreens')}
 function setNativeHidden(on){q('#view')?.classList.toggle('ap-native-screen-hidden',on);q('#globalFilterPanel')?.classList.toggle('ap-filter-native-hidden',on)}
 
-const nativeDefaultViews=new Set(['scheduled','pending','route-history','reports','neighborhoods','costs','trace','trash']);
+const nativeDefaultViews=new Set(['today','scheduled','pending','route-history','reports','neighborhoods','costs','trace','trash']);
 
 function functionalGroups(view){
  const groups={
@@ -108,6 +108,7 @@ function functionalGroups(view){
 function removeFunctionalToolbar(){q('#apFunctionalToolbar')?.remove();document.body.classList.remove('ap-native-functional')}
 function injectFunctionalToolbar(view){
  removeFunctionalToolbar();
+ if(view==='today')return;
  const items=functionalGroups(view); if(!items.length)return;
  const bar=document.createElement('div');bar.id='apFunctionalToolbar';bar.className='ap-functional-toolbar';
  bar.innerHTML=`<div class="ap-functional-title"><b>FUNÇÕES COMPLETAS</b><small>Visual atual + recursos operacionais originais</small></div><div class="ap-functional-tabs">${items.map(([target,label,mode])=>{

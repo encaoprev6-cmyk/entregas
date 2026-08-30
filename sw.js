@@ -1,4 +1,4 @@
-const CACHE_NAME = 'orbita-entregas-v1';
+const CACHE_NAME = 'orbita-entregas-v2-central-operacional';
 const APP_SHELL = [
   './',
   './index.html',

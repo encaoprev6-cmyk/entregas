@@ -70,7 +70,7 @@
 
   const pageMeta = {
     dashboard: ['Dashboard', 'Visão geral da operação, custos, faturamento e produtividade.'],
-    today: ['Central de Operação', 'O que está acontecendo agora, o que precisa de ação e qual é o próximo passo.'],
+    today: ['Central Operacional', 'Toda a operação do dia em um só lugar: entregas, ciclos, frota, pendências e custos.'],
     deliveries: ['Entregas', 'Cadastro completo e histórico anual de todas as entregas.'],
     scheduled: ['Programadas e Reagendadas', 'Agenda automática pela data programada, sem perder o histórico da origem.'],
     pending: ['Central de Pendências', 'Tudo que exige ação antes de encerrar a operação.'],
