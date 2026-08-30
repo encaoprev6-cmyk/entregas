@@ -24,3 +24,13 @@ O projeto usa o layout **Órbita**: navegação azul profunda, cartões claros, 
 O projeto é estático e compatível com GitHub Pages. Basta publicar a raiz deste diretório como branch `main` ou `gh-pages`.
 
 O histórico operacional novo deve começar em **01/09/2026**. O repositório não importa dados antigos automaticamente.
+
+## Segurança de produção
+
+Esta versão remove o sincronizador público duplicado e exige autenticação para sincronizar dados entre dispositivos. O modo offline continua disponível, mas os lançamentos só entram na operação compartilhada depois da conexão autenticada.
+
+Antes de liberar a operação real, execute `supabase_roles_and_audit.sql` no SQL Editor do Supabase. Ele habilita os perfis `admin`, `leader`, `operator` e `viewer`, restringe gravações no banco a perfis autorizados e impede exclusão física do estado sincronizado.
+
+Depois, crie os usuários em Authentication > Users e associe cada UUID ao workspace `nilo-entregas` em `delivery_workspace_members`, usando `admin`, `leader`, `operator` ou `viewer` conforme a função. O login do app usa o nome de usuário como prefixo do e-mail configurado no Supabase.
+
+Os registros operacionais anteriores a **01/09/2026** ficam fora da Operação Real. Use o ambiente de Treinamento para simulações anteriores.

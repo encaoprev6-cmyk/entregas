@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 100907)
+Total output lines: 4792
+
 (() => {
   // V8: tema visual de foco médio-escuro, com gráficos legíveis e cores reduzidas.
   if (typeof Chart !== 'undefined') {
@@ -7,7 +10,8 @@
   }
   'use strict';
 
-  const APP_VERSION = '14.8.0';
+  const APP_VERSION = '15.0.0';
+  const OFFICIAL_HISTORY_START = '2026-09-01';
   const DB_NAME = 'controle_entregas_nx';
   const DB_VERSION = 1;
   const STORE_NAME = 'app_state';
@@ -40,6 +44,7 @@
   let cloudClient = null;
   let cloudSession = null;
   let cloudWorkspace = null;
+  let cloudRole = 'operator';
   let realtimeChannel = null;
   let syncQueue = [];
   let syncSnapshot = {};
@@ -74,7 +79,7 @@
     deliveries: ['Entregas', 'Cadastro completo e histórico anual de todas as entregas.'],
     scheduled: ['Programadas e Reagendadas', 'Agenda automática pela data programada, sem perder o histórico da origem.'],
     pending: ['Central de Pendências', 'Tudo que exige ação antes de encerrar a operação.'],
-    cycles: ['Ciclos e roteiros', 'Monte cada saída, priorize entregas e abra a sequência dos bairros no Google Maps.'],
+    cycles: ['Ciclos e roteiros', 'Monte cada saída, priorize entregas e acompanhe a sequência operacional por bairro.'],
     'route-history': ['Histórico de rotas', 'Veja o trajeto real do entregador por dia, semana, mês ou período específico.'],
     odometer: ['Quilometragem da frota', 'KM inicial e final do dia por veículo, com médias por dia, semana, mês, entrega e ciclo.'],
     costs: ['Custos da frota', 'Combustível, manutenção e outros gastos registrados individualmente.'],
@@ -184,7 +189,24 @@
 
   function currentMode() { return state?.settings?.appMode === 'training' ? 'training' : 'production'; }
   function modeLabel() { return currentMode() === 'training' ? 'Treinamento' : 'Operação real'; }
-  function recordInCurrentMode(item) { return (item?.mode || 'production') === currentMode(); }
+  function operationalTodayISO() {
+    const today = todayISO();
+    return currentMode() === 'production' && today < OFFICIAL_HISTORY_START ? OFFICIAL_HISTORY_START : today;
+  }
+  function recordInCurrentMode(item) {
+    if ((item?.mode || 'production') !== currentMode()) return false;
+    if (currentMode() === 'production') {
+      const activityDate = String(item?.date || item?.deletedAt || item?.at || '').slice(0, 10);
+      if (activityDate && activityDate < OFFICIAL_HISTORY_START) return false;
+    }
+    return true;
+  }
+  function isOfficialOperationalDate(value) {
+    return currentMode() === 'training' || String(value || '') >= OFFICIAL_HISTORY_START;
+  }
+  function officialDateMessage() {
+    return `A Operação Real começa em ${dateBR(OFFICIAL_HISTORY_START)}. Para simulações anteriores, use o modo Treinamento.`;
+  }
   function scoped(list) { return (list || []).filter(recordInCurrentMode); }
   function cloneData(value) { return JSON.parse(JSON.stringify(value)); }
 
@@ -559,8 +581,17 @@
     if(!cloudClient||!cloudSession||!navigator.onLine)return;
     const {data:workspace,error:workspaceError}=await cloudClient.from('delivery_workspaces').select('id,code,name').eq('code',SYNC_WORKSPACE_CODE).single();
     if(workspaceError)throw workspaceError;
-    cloudWorkspace=workspace;
-    try{localStorage.setItem('delivery_sync_workspace',JSON.stringify(workspace));}catch{}
+    const {data:membership,error:membershipError}=await cloudClient
+      .from('delivery_workspace_members')
+      .select('role,active')
+      .eq('workspace_id',workspace.id)
+      .eq('user_id',cloudSession.user.id)
+      .maybeSingle();
+    if (membershipError) throw membershipError;
+    if (!membership?.active) throw new Error('Sua conta não possui um perfil ativo neste sistema.');
+    cloudRole = ['admin','leader','operator','viewer'].includes(membership.role) ? membership.role : 'viewer';
+    cloudWorkspace={...workspace,role:cloudRole};
+    try{localStorage.setItem('delivery_sync_workspace',JSON.stringify(cloudWorkspace));}catch{}
     syncReady=true;
     if(Object.keys(syncSnapshot).length||syncQueue.length)await queueStateChanges({deferFlush:true});
     const rows=await fetchAllRemoteEntities();
@@ -583,12 +614,17 @@
   }
   function lastCloudUsername() { try{return localStorage.getItem('delivery_last_username')||'';}catch{return '';} }
   function cloudUsername() { return cloudSession?.user?.email?.split('@')[0]||lastCloudUsername(); }
+  function cloudRoleLabel(role = cloudRole) {
+    return ({admin:'Administrador',leader:'Líder',operator:'Equipe operacional',viewer:'Consulta'})[role] || 'Equipe operacional';
+  }
   function showCloudAuth(message='') {
     const screen=$('#cloudAuthScreen');if(!screen)return;
     screen.classList.remove('hidden');screen.setAttribute('aria-hidden','false');
     $('#cloudAuthMessage').textContent=message;
     const username=$('#cloudAuthForm [name="username"]');if(username&&!username.value)username.value=lastCloudUsername();
-    $('#continueOfflineBtn').classList.toggle('hidden',!lastCloudUsername());
+    // O modo offline deve continuar disponível mesmo no primeiro acesso.
+    // A autenticação é necessária para sincronizar; não para trabalhar localmente.
+    $('#continueOfflineBtn').classList.remove('hidden');
     $('#appShell').setAttribute('aria-hidden','true');
   }
   function hideCloudAuth() {
@@ -598,7 +634,7 @@
   function updateCloudAccountButton() {
     const button=$('#syncAccountBtn');if(!button)return;
     button.hidden=!cloudSession;
-    if(cloudSession)button.textContent=`☁ ${cloudUsername()||'Conta'} • Sair`;
+    if(cloudSession)button.textContent=`☁ ${cloudUsername()||'Conta'} • ${cloudRoleLabel()} • Sair`;
   }
   async function cloudLogin(event) {
     event.preventDefault();
@@ -625,7 +661,7 @@
     if(!confirm('Sair da conta neste aparelho? Os dados locais continuarão guardados, mas a sincronização ficará pausada.'))return;
     if(realtimeChannel)await cloudClient.removeChannel(realtimeChannel).catch(()=>{});
     await cloudClient.auth.signOut();
-    cloudSession=null;cloudWorkspace=null;syncReady=false;syncRealtimeStatus='DISCONNECTED';updateCloudAccountButton();updateConnectionStatus();showCloudAuth('Conta desconectada deste aparelho.');
+    cloudSession=null;cloudWorkspace=null;cloudRole='operator';syncReady=false;syncRealtimeStatus='DISCONNECTED';updateCloudAccountButton();updateConnectionStatus();showCloudAuth('Conta desconectada deste aparelho.');
   }
   function bindCloudEvents() {
     const form=$('#cloudAuthForm');
@@ -652,7 +688,7 @@
     if(!cloudSession){showCloudAuth();updateCloudAccountButton();return;}
     try{localStorage.setItem('delivery_last_username',cloudUsername());}catch{}
     if(!navigator.onLine){
-      try{cloudWorkspace=JSON.parse(localStorage.getItem('delivery_sync_workspace')||'null');}catch{cloudWorkspace=null;}
+      try{cloudWorkspace=JSON.parse(localStorage.getItem('delivery_sync_workspace')||'null');cloudRole=cloudWorkspace?.role||'operator';}catch{cloudWorkspace=null;cloudRole='operator';}
       syncReady=Boolean(cloudWorkspace);hideCloudAuth();updateCloudAccountButton();updateConnectionStatus();return;
     }
     try{await connectCloudSession();}
@@ -666,7 +702,16 @@
 
   async function saveState(action = '') {
     state.meta.updatedAt = nowISO();
-    if (action) state.audit.unshift({ id: uid('aud'), at: nowISO(), action });
+    if (action) state.audit.unshift({
+      id: uid('aud'),
+      at: nowISO(),
+      action,
+      actor: cloudUsername() || 'Usuário local / offline',
+      actorId: cloudSession?.user?.id || syncClientId,
+      actorRole: cloudSession ? cloudRoleLabel() : 'Operação offline',
+      mode: currentMode(),
+      source: cloudSession ? 'authenticated' : 'offline-local'
+    });
     if (state.audit.length > 2000) state.audit = state.audit.slice(0, 2000);
     await idbSet(STATE_KEY, state);
     await queueStateChanges();
@@ -723,7 +768,7 @@
 
   function initPWA() {
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-      navigator.serviceWorker.register('./sw.js?v=14.8.0').catch(console.warn);
+      navigator.serviceWorker.register('./sw.js?v=15.0.0').catch(console.warn);
     }
     window.addEventListener('beforeinstallprompt', (event) => {
       event.preventDefault();
@@ -2772,44 +2817,7 @@
     const dates=[0,1,2,3].map(back=>{const d=new Date();d.setDate(d.getDate()-back);return localDateISO(d)}), created=[];
     for(let i=0;i<10;i++){ const date=dates[i%dates.length], fee=i%3===0?9.99:6.99, nb=nbs[i%nbs.length]; const d={id:uid('del'),rootId:'',parentId:'',attemptNo:1,date,orderNo:String(i+1),coupon:`TREINO-${String(i+1).padStart(3,'0')}`,docNo:`DOC-${String(1001+i)}`,cashierNo:String((i%3)+1),customerName:i%2===0?`CLIENTE EXEMPLO ${i+1}`:'',customerPhone:i%2===0?`( 66 ) 9 9999-${String(1000+i)}`:'',purchaseTime:`${String(9+(i%7)).padStart(2,'0')}:${i%2?'20':'05'}`,neighborhoodId:nb.id,address:`Rua Exemplo ${i+1}`,addressNumber:String(100+i),addressComplement:'',addressReference:i%2?'Próximo à praça':'',priority:i===0,fee,driverId:'',vehicleId:'',cycleId:'',departureTime:'',finalizationTime:'',returnTime:'',status:'Na loja',scheduledDate:'',scheduledTime:'',scheduleNotes:'',scheduleKind:'',reasonId:'',reasonText:'',nextAction:'',notes:'Registro criado automaticamente para treinamento.',returnedUndelivered:false,returnReasonId:'',returnReasonText:'',refundAmount:0,refundDate:'',withdrawalDate:'',withdrawalTime:'',createdAt:nowISO(),updatedAt:nowISO(),mode:'training',history:[]}; d.rootId=d.id; if(i===7){d.status='Programada';d.scheduledDate=dates[0];d.scheduledTime='15:30';d.scheduleNotes='Ligar antes da entrega.';d.scheduleKind='Programada';d.history.push({id:uid('evt'),type:'scheduled',from:d.date,to:d.scheduledDate,scheduledTime:d.scheduledTime,scheduleNotes:d.scheduleNotes,at:nowISO()});} if(i===8){d.status='Devolvida';d.reasonId='ENDERECO_ERRADO';d.returnedUndelivered=true;d.returnReasonId='ENDERECO_ERRADO';} state.deliveries.push(d);created.push(d); }
     const cycleDeliveries=created.slice(0,3), c={id:uid('cyc'),code:'CIC-TREINO-001',date:dates[0],vehicleId:veh.id,driverId:emp.id,departureTime:'09:30',returnTime:'10:40',notes:'Ciclo de treinamento.',routeDeliveryIds:routeSortDeliveries(created.slice(0,3)).map(d=>d.id),routeGeneratedAt:nowISO(),routeStrategy:'priority_neighborhood_google_maps',createdAt:nowISO(),updatedAt:nowISO(),mode:'training'}; state.cycles.push(c); const trainingTrack=ensureRouteTrack(c);trainingTrack.status='completed';trainingTrack.startedAt=`${dates[0]}T09:30:00`;trainingTrack.endedAt=`${dates[0]}T10:40:00`;trainingTrack.points=[{lat:-14.6752,lng:-52.3521,accuracy:8,speed:null,heading:null,at:`${dates[0]}T09:30:00`},{lat:-14.6708,lng:-52.3462,accuracy:10,speed:null,heading:null,at:`${dates[0]}T09:47:00`},{lat:-14.6669,lng:-52.3514,accuracy:9,speed:null,heading:null,at:`${dates[0]}T10:06:00`},{lat:-14.6735,lng:-52.3581,accuracy:11,speed:null,heading:null,at:`${dates[0]}T10:24:00`},{lat:-14.6752,lng:-52.3521,accuracy:8,speed:null,heading:null,at:`${dates[0]}T10:40:00`}];trainingTrack.distanceKm=2.65;trainingTrack.lastPointAt=trainingTrack.points.at(-1).at; cycleDeliveries.forEach((d,idx)=>{d.cycleId=c.id;d.vehicleId=veh.id;d.driverId=emp.id;d.departureTime='09:30';d.finalizationTime=`10:${String(5+idx*8).padStart(2,'0')}`;d.returnTime='10:40';d.status='Finalizada';});
-    state.odometerLogs.push({id:uid('odo'),date:dates[0],vehicleId:veh.id,kmStart:10000,kmEnd:10038,notes:'Treinamento',createdAt:nowISO(),updatedAt:nowISO(),mode:'training'});
-    const fuel=state.costCategories.find(x=>x.name==='Combustível'); state.costs.push({id:uid('cost'),date:dates[0],time:'11:00',vehicleId:veh.id,categoryId:fuel?.id||'',description:'Abastecimento de treinamento',value:80,km:10038,supplier:'Posto Exemplo',receiptNo:'TREINO',responsibleId:emp.id,notes:'Dado de treinamento.',createdAt:nowISO(),updatedAt:nowISO(),mode:'training'});
-    await saveState('Dados de treinamento de exemplo criados'); toast('Dados de treinamento criados.','success'); render();
-  }
-  async function clearTrainingData() { if(currentMode()!=='training')return; if(!confirm('Apagar TODOS os dados de treinamento? A operação real não será afetada.'))return; if(activeRouteCycleId)clearLocalRouteWatcher(); for(const key of ['deliveries','cycles','routeTracks','odometerLogs','costs']) state[key]=state[key].filter(x=>(x.mode||'production')!=='training'); state.trash=state.trash.filter(x=>(x.mode||'production')!=='training'); await saveState('Dados de treinamento limpos'); toast('Treinamento limpo.','success'); render(); }
-
-  function renderSettings() {
-    const tabs = [
-      ['vehicles','Veículos'],['neighborhoods','Bairros'],['employees','Colaboradores'],['costCategories','Categorias de custo'],['reasons','Motivos'],['rules','Regras'],['data','Dados']
-    ];
-    $('#view').innerHTML = `
-      <div class="settings-tabs">${tabs.map(([id,label])=>`<button class="tab-btn ${configTab===id?'active':''}" data-config-tab="${id}">${label}</button>`).join('')}</div>
-      <section class="settings-grid">
-        <aside class="card settings-side">
-          <h3>Cadastros mestres</h3><p>Itens desativados deixam de aparecer em novos lançamentos, mas continuam nos relatórios e no histórico.</p>
-          <div class="settings-stat"><span>Veículos ativos</span><strong>${state.vehicles.filter(x=>x.active).length}</strong></div>
-          <div class="settings-stat"><span>Bairros ativos</span><strong>${state.neighborhoods.filter(x=>x.active).length}</strong></div>
-          <div class="settings-stat"><span>Colaboradores ativos</span><strong>${state.employees.filter(x=>x.active).length}</strong></div>
-          <div class="settings-stat"><span>Entregas registradas</span><strong>${scoped(state.deliveries).length}</strong></div>
-        </aside>
-        <article class="card section-card" id="settingsContent">${settingsContent()}</article>
-      </section>
-    `;
-    $$('.tab-btn').forEach(btn=>btn.addEventListener('click',()=>{configTab=btn.dataset.configTab;renderSettings();}));
-    bindSettingsActions();
-  }
-
-  function settingsContent() {
-    if (configTab === 'rules') {
-      return `${sectionHeader('⚙','Regras operacionais','Defina o expediente e os padrões máximos da entrega.')}
-        <div class="form-grid">
-          <label>Início expediente<input id="ruleWorkStart" type="time" value="${state.settings.workStart}" /></label>
-          <label>Início almoço<input id="ruleLunchStart" type="time" value="${state.settings.lunchStart}" /></label>
-          <label>Fim almoço<input id="ruleLunchEnd" type="time" value="${state.settings.lunchEnd}" /></label>
-          <label>Fim expediente<input id="ruleWorkEnd" type="time" value="${state.settings.workEnd}" /></label>
-          <label>Limite compra → saída (minutos)<input id="ruleDelay" type="number" min="1" value="${state.settings.delayMinutes}" /></label>
-          <label>Limite compra → cliente (minutos)<input id="ruleCompletionLimit" type="number" min="1" value="${state.settings.completionLimitMinutes || 210}" /></label>
-          <label class="span-2">Ponto de saída e retorno da rota<input id="ruleRouteOrigin" value="${attr(routeOriginLabel())}" placeholder="Ex.: Nilo Supermercado, Nova Xavantina - MT" /></label>
+    state.odometerLogs.push({id:uid('odo'),date:dates[0],vehicleId:veh.id,kmStart:10000,kmEnd:10038,notes:'T…907 tokens truncated…      <label class="span-2">Ponto de saída e retorno da rota<input id="ruleRouteOrigin" value="${attr(routeOriginLabel())}" placeholder="Ex.: Nilo Supermercado, Nova Xavantina - MT" /></label>
           <label class="span-2">Cidade usada pelo Google Maps<input id="ruleRouteCity" value="${attr(routeCityLabel())}" placeholder="Ex.: Nova Xavantina - MT" /></label>
           <div class="full form-note"><strong>Padrão 1:</strong> compra até a saída, em tempo corrido (padrão atual: 2h).<br><strong>Padrão 2:</strong> compra até a finalização na casa do cliente, também em tempo corrido (padrão atual: 3h30). Exemplo: compra às 10:00 e saída às 12:00 deixam 1h30 para a entrega.</div>
           <div class="full form-note"><strong>Roteirização:</strong> o ponto de saída também será o retorno do ciclo. Em cada bairro, configure a ordem operacional para evitar cruzamentos desnecessários.</div>
@@ -3004,7 +3012,7 @@
 
 
   function openQuickDeliveryModal() {
-    const today = todayISO();
+    const today = operationalTodayISO();
     const time = currentTimeHM();
     const last = lastPurchaseSummary(today);
     const prev = last.previous;
@@ -3026,8 +3034,8 @@
             <label>Data da compra <small>(obrigatório)</small><input name="date" type="date" value="${today}" required /></label>
             <label>Hora da compra <small>(obrigatório)</small><input name="purchaseTime" type="time" value="${time}" required /></label>
             <label>Bairro <small>(obrigatório)</small><select name="neighborhoodId" required>${options(state.neighborhoods,'')}</select></label>
-            <label>Rua / avenida <small>(recomendado para a rota)</small><input name="address" autocomplete="street-address" placeholder="Ex.: AVENIDA BRASIL" /></label>
-            <label>Número <small>(recomendado para a rota)</small><input name="addressNumber" inputmode="numeric" placeholder="Ex.: 1250" /></label>
+            <label>Rua / avenida <small>(obrigatório)</small><input name="address" autocomplete="street-address" placeholder="Ex.: AVENIDA BRASIL" required /></label>
+            <label>Número <small>(obrigatório)</small><input name="addressNumber" inputmode="numeric" placeholder="Ex.: 1250" required /></label>
             <label>Complemento <small>(opcional)</small><input name="addressComplement" placeholder="Ex.: APTO 2, FUNDOS" /></label>
             <label>Referência <small>(opcional)</small><input name="addressReference" placeholder="Ex.: AO LADO DA FARMÁCIA" /></label>
             <label>Nome do cliente <small>(opcional)</small><input name="customerName" autocomplete="name" data-uppercase-name placeholder="Ex.: MARIA DA SILVA" /></label>
@@ -3125,6 +3133,8 @@
       for (const field of ['address','addressNumber','addressComplement','addressReference']) data[field] = String(data[field] || '').trim();
       data.priority = data.priority === 'on';
       data.scheduleNotes = String(data.scheduleNotes || '').trim();
+      if (!isOfficialOperationalDate(data.date)) { toast(officialDateMessage(),'warning'); return; }
+      if (!data.neighborhoodId || !data.address || !data.addressNumber) { toast('Informe bairro, rua e número da residência para registrar a entrega.','warning'); return; }
       const parsedFee = data.feeMode === 'custom' ? parseMoneyInput(data.customFee) : parseMoneyInput(data.fee);
       if(parsedFee === null){toast(data.feeMode === 'custom' ? 'Informe um valor válido para a taxa livre.' : 'Escolha a taxa de entrega.','warning');return;}
       data.fee = String(parsedFee);
@@ -3170,18 +3180,18 @@
           <label>Data<input name="date" type="date" value="${d.date}" required /></label>
           <label>Nº da compra<input name="orderNo" value="${attr(d.orderNo)}" placeholder="Ordem de chegada" /></label>
           <label>Nº DO CUPOM<input name="coupon" value="${attr(d.coupon)}" required /></label>
-          <label>Nº do DOC<input name="docNo" value="${attr(d.docNo)}" inputmode="numeric" placeholder="Não informado em registros antigos" /></label>
-          <label>Nº do caixa<input name="cashierNo" value="${attr(d.cashierNo)}" inputmode="numeric" placeholder="Não informado em registros antigos" /></label>
+          <label>Nº do DOC<input name="docNo" value="${attr(d.docNo)}" inputmode="numeric" required /></label>
+          <label>Nº do caixa<input name="cashierNo" value="${attr(d.cashierNo)}" inputmode="numeric" required /></label>
           <label>Nome do cliente <small>(opcional)</small><input name="customerName" value="${attr(d.customerName)}" autocomplete="name" data-uppercase-name /></label>
           <label>Número de telefone <small>(opcional)</small><input name="customerPhone" value="${attr(d.customerPhone)}" type="tel" inputmode="tel" autocomplete="tel" data-phone-mask maxlength="20" placeholder="( 99 ) 9 9999-9999" /></label>
-          <label>Hora da compra / entrada<input name="purchaseTime" type="time" value="${d.purchaseTime || ''}" /></label>
-          <label>Bairro<select name="neighborhoodId">${options(state.neighborhoods,d.neighborhoodId)}</select></label>
-          <label>Rua / avenida<input name="address" value="${attr(d.address||'')}" autocomplete="street-address" /></label>
-          <label>Número<input name="addressNumber" value="${attr(d.addressNumber||'')}" inputmode="numeric" /></label>
+          <label>Hora da compra / entrada<input name="purchaseTime" type="time" value="${d.purchaseTime || ''}" required /></label>
+          <label>Bairro<select name="neighborhoodId" required>${options(state.neighborhoods,d.neighborhoodId)}</select></label>
+          <label>Rua / avenida<input name="address" value="${attr(d.address||'')}" autocomplete="street-address" required /></label>
+          <label>Número<input name="addressNumber" value="${attr(d.addressNumber||'')}" inputmode="numeric" required /></label>
           <label>Complemento<input name="addressComplement" value="${attr(d.addressComplement||'')}" /></label>
           <label>Referência<input name="addressReference" value="${attr(d.addressReference||'')}" /></label>
           <label class="priority-delivery-toggle"><input name="priority" type="checkbox" ${d.priority?'checked':''} /><span><strong>★ Entrega prioritária</strong><small>Fica no começo do roteiro do ciclo.</small></span></label>
-          <label>Taxa de entrega<input name="fee" type="number" step="0.01" min="0" value="${Number(d.fee||0) || ''}" /></label>
+          <label>Taxa de entrega<input name="fee" type="number" step="0.01" min="0" value="${Number(d.fee||0) || ''}" required /></label>
           <label>Entregador<select name="driverId">${options(state.employees.filter(x=>x.role==='Entregador'||x.role==='Colaborador'),d.driverId)}</select></label>
           <label>Veículo<select name="vehicleId">${options(state.vehicles,d.vehicleId)}</select></label>
           <label>Ciclo<select name="cycleId">${options(scoped(state.cycles),d.cycleId,'code')}</select></label>
@@ -3237,6 +3247,8 @@
       for (const field of ['address','addressNumber','addressComplement','addressReference']) data[field] = String(data[field] || '').trim();
       data.priority = data.priority === 'on';
       data.scheduleNotes = String(data.scheduleNotes || '').trim();
+      if (!isOfficialOperationalDate(data.date)) { toast(officialDateMessage(),'warning'); return; }
+      if (!data.purchaseTime || !data.neighborhoodId || !data.address || !data.addressNumber || !data.docNo || !data.cashierNo || !data.coupon) { toast('Preencha os campos obrigatórios da entrega antes de salvar.','warning'); return; }
       if (!data.scheduledDate) { data.scheduledTime = ''; data.scheduleNotes = ''; }
       data.fee = Number(data.fee || 0);
       data.refundAmount = Number(data.refundAmount || 0);
@@ -3436,7 +3448,7 @@
   }
 
   function openCycleDepartureModal(preselectDeliveryId='') {
-    const date=todayISO();
+    const date=operationalTodayISO();
     const available=cycleAvailableDeliveries(date);
     if (!available.length) {
       toast('Não há entregas disponíveis para montar uma nova saída.','warning');
@@ -3758,7 +3770,7 @@
       <form id="quickRescheduleForm" class="quick-action-form">
         <div class="quick-action-summary"><strong>Nº do cupom ${esc(d.coupon||'—')}</strong><small>Taxa original ${money(rootDelivery(d)?.fee||d.fee)} • não será duplicada</small></div>
         <div class="form-grid">
-          <label>Nova data<input name="scheduledDate" type="date" min="${todayISO()}" required /></label>
+          <label>Nova data<input name="scheduledDate" type="date" min="${operationalTodayISO()}" required /></label>
           <label>Novo horário<input name="scheduledTime" type="time" value="${d.scheduledTime || ''}" required /></label>
           <label>Motivo<select name="reasonId">${options(state.reasons,d.reasonId)}</select></label>
           <label>Próxima ação<input name="nextAction" value="${attr(d.nextAction||'Reentregar na nova data')}" /></label>
@@ -3771,6 +3783,7 @@
     $('#cancelRescheduleBtn').addEventListener('click',closeModal);
     $('#quickRescheduleForm').addEventListener('submit',async e=>{
       e.preventDefault();const data=Object.fromEntries(new FormData(e.target).entries());
+      if (!isOfficialOperationalDate(data.scheduledDate)) { toast(officialDateMessage(),'warning'); return; }
       const oldDate=d.scheduledDate||d.date,oldTime=d.scheduledTime||'';d.scheduledDate=data.scheduledDate;d.scheduledTime=data.scheduledTime;d.scheduleNotes=String(data.scheduleNotes||'').trim();d.scheduleKind='Reagendada';d.status='Reagendada';d.reasonId=data.reasonId||'';d.reasonText=data.reasonText||'';d.nextAction=data.nextAction||'';d.updatedAt=nowISO();d.history||=[];d.history.push({id:uid('evt'),type:'schedule_change',from:oldDate,fromTime:oldTime,to:d.scheduledDate,scheduledTime:d.scheduledTime,scheduleNotes:d.scheduleNotes,kind:'Reagendada',at:nowISO(),reasonId:d.reasonId,reasonText:d.reasonText});
       await saveState(`Entrega ${d.coupon} reagendada`);closeModal();toast(`Entrega reagendada para ${scheduledDateTimeLabel(d)}. O faturamento não foi duplicado.`,'success');render();
     });
@@ -3871,13 +3884,14 @@
     $('#cancelCycleBtn').addEventListener('click',closeModal); $('#deleteCycleBtn').addEventListener('click',()=>deleteRecord('cycle',c.id));
     $('#cycleForm').addEventListener('submit',async e=>{
       e.preventDefault();const data=Object.fromEntries(new FormData(e.target).entries());
+      if (!isOfficialOperationalDate(data.date)) { toast(officialDateMessage(),'warning'); return; }
       data.id=c.id;data.createdAt=c.createdAt||nowISO();data.updatedAt=nowISO();data.mode=existing.mode||currentMode();Object.assign(existing,data);
       await saveState(`Ciclo ${data.code} ajustado`);closeModal();toast('Ciclo ajustado.','success');render();
     });
   }
   function openOdometerModal(id='', presetVehicleId='') {
     const existing = id ? scoped(state.odometerLogs).find(o=>o.id===id) : null;
-    const o = existing ? {...existing} : {id:uid('odo'),date:todayISO(),vehicleId:presetVehicleId||'',kmStart:'',kmEnd:'',notes:'',createdAt:nowISO(),updatedAt:nowISO(),mode:currentMode()};
+    const o = existing ? {...existing} : {id:uid('odo'),date:operationalTodayISO(),vehicleId:presetVehicleId||'',kmStart:'',kmEnd:'',notes:'',createdAt:nowISO(),updatedAt:nowISO(),mode:currentMode()};
     openModal(existing?'Atualizar KM diário':'Registrar KM diário','Informe o KM inicial no começo do dia e complete o KM final no encerramento. O sistema calcula todas as médias automaticamente.',`
       <form id="odometerForm">
         <div class="odometer-form-intro"><span>KM</span><div><strong>Um único fechamento por veículo e por dia</strong><small>Não informe KM em cada ciclo. O app usa o total diário para calcular KM por ciclo e por entrega.</small></div></div>
@@ -3896,6 +3910,7 @@
       e.preventDefault();
       const data=Object.fromEntries(new FormData(e.target).entries());
       data.kmStart=Number(data.kmStart||0);data.kmEnd=Number(data.kmEnd||0);
+      if (!isOfficialOperationalDate(data.date)) { toast(officialDateMessage(),'warning'); return; }
       if(data.kmEnd && data.kmEnd < data.kmStart){toast('O KM final não pode ser menor que o KM inicial.','error');return;}
       const duplicate=scoped(state.odometerLogs).find(x=>x.date===data.date && x.vehicleId===data.vehicleId && x.id!==o.id);
       if(duplicate){toast('Já existe um registro de KM para esse veículo nessa data. Abra o existente e atualize.','warning');return;}
@@ -3909,7 +3924,7 @@
   function openCostModal(id='') {
     const existing=id?scoped(state.costs).find(c=>c.id===id):null;
     const fuelCat=state.costCategories.find(c=>c.name==='Combustível');
-    const c=existing?{...existing}:{id:uid('cost'),date:todayISO(),time:'',vehicleId:'',categoryId:fuelCat?.id||'',description:'',value:0,km:0,supplier:'',receiptNo:'',responsibleId:'',notes:'',createdAt:nowISO(),updatedAt:nowISO(),mode:currentMode()};
+    const c=existing?{...existing}:{id:uid('cost'),date:operationalTodayISO(),time:'',vehicleId:'',categoryId:fuelCat?.id||'',description:'',value:0,km:0,supplier:'',receiptNo:'',responsibleId:'',notes:'',createdAt:nowISO(),updatedAt:nowISO(),mode:currentMode()};
     openModal(existing?'Editar custo':'Registrar custo','Todo gasto fica disponível nos relatórios por dia, semana, mês, ano e veículo.',`
       <form id="costForm">
         <div class="form-grid">
@@ -3931,6 +3946,7 @@
     $('#cancelCostBtn').addEventListener('click',closeModal); if(existing) $('#deleteCostBtn').addEventListener('click',()=>deleteRecord('cost',c.id));
     $('#costForm').addEventListener('submit',async e=>{
       e.preventDefault();const data=Object.fromEntries(new FormData(e.target).entries());
+      if (!isOfficialOperationalDate(data.date)) { toast(officialDateMessage(),'warning'); return; }
       data.id=c.id;data.value=Number(data.value||0);data.km=Number(data.km||0);data.createdAt=c.createdAt||nowISO();data.updatedAt=nowISO();data.mode=existing?.mode||currentMode();
       if(existing) Object.assign(existing,data); else state.costs.push(data);
       await saveState(`Custo ${data.description} salvo`);closeModal();toast('Custo salvo.','success');render();

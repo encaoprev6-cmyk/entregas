@@ -1,16 +1,14 @@
-const CACHE_NAME = 'orbita-entregas-v5-central-operacoes';
+const CACHE_NAME = 'orbita-entregas-v6-seguranca-operacao';
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=14.8.0',
+  './styles.css?v=15.0.0',
   './nilo-layout-v15.css?v=15.0.0',
   './ui-stable-v19.css?v=19.0.0',
-  './app.js?v=14.8.0',
-  './public-sync.js?v=32.1.0',
+  './app.js?v=15.0.0',
   './route-view-stable-v19.js?v=19.0.0',
   './manifest.webmanifest',
   './favicon-v33.png?v=35.0.0',
-  './route-planner-stable-v24.js?v=24.0.0',
   './nilo-contrast-v28.css?v=28.0.0',
   './operational-fixes-v31.js?v=31.0.0',
   './nilo-approved-v33-exact.css?v=35.0.0',
