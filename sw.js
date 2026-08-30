@@ -1,4 +1,4 @@
-const CACHE_NAME = 'orbita-entregas-v3-identidade-nilo';
+const CACHE_NAME = 'orbita-entregas-v4-redesign-nilo';
 const APP_SHELL = [
   './',
   './index.html',
@@ -15,13 +15,13 @@ const APP_SHELL = [
   './operational-fixes-v31.js?v=31.0.0',
   './nilo-approved-v33-exact.css?v=35.0.0',
   './nilo-approved-v33-screens.css?v=35.0.0',
-  './layout-orbita.css?v=1.0.0',
-  './nilo-approved-v33.js?v=36.0.0',
+  './layout-orbita.css?v=2.0.0',
+  './nilo-approved-v33.js?v=37.0.0',
   './nilo-approved-v33-screens.js?v=35.0.0',
-  './logo-nilo-novo.png?v=36.0.0',
+  './logo-nilo-novo.png?v=37.0.0',
   './logo-triela-aprovada.png?v=35.0.0',
-  './mascote-nilo-novo.jpeg?v=36.0.0',
-  './mascote-nilo-rosto-novo.jpeg?v=36.0.0',
+  './mascote-nilo-novo.jpeg?v=37.0.0',
+  './mascote-nilo-rosto-novo.jpeg?v=37.0.0',
   './map-central-v35.png?v=35.0.0',
   './map-routes-v35.png?v=35.0.0',
   './vehicle-fiorino-v33.png?v=35.0.0',

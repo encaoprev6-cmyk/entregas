@@ -186,3 +186,354 @@ body.nilo-v33-exact.ap-native-functional #view .day-close-checkpoint p { color: 
   body.nilo-v33-exact.ap-native-functional #view .v11-section-number { display: none !important; }
   body.nilo-v33-exact.ap-native-functional #view .v11-section-card { padding: 14px !important; }
 }
+
+/* ================================================================
+   NILO REDESIGN V1 • sistema visual unificado
+   Mantém IDs, ações e fluxos existentes; altera apenas apresentação.
+   ================================================================ */
+body.nilo-redesign-v1 {
+  --sidebar: 286px;
+  --nilo-navy: #062d68;
+  --nilo-blue: #0b6fce;
+  --nilo-sky: #eaf4ff;
+  --nilo-yellow: #ffd51a;
+  --nilo-ink: #102b50;
+  --nilo-muted: #6a7d98;
+  --nilo-bg: #f3f7fc;
+  --nilo-line: #dce8f5;
+  --nilo-radius: 20px;
+  --nilo-shadow: 0 12px 30px rgba(21, 67, 121, .08);
+  background: var(--nilo-bg) !important;
+  color: var(--nilo-ink) !important;
+  font-family: Inter, "Nunito Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+body.nilo-redesign-v1 .app-shell {
+  background: var(--nilo-bg) !important;
+}
+
+body.nilo-redesign-v1 .sidebar {
+  width: 286px !important;
+  background: linear-gradient(175deg, #05265b 0%, #074b9c 57%, #0876c9 100%) !important;
+  box-shadow: 16px 0 38px rgba(5, 44, 101, .18) !important;
+}
+
+body.nilo-redesign-v1 .ap-side-logo {
+  height: 78px !important;
+  margin: 8px 2px 12px !important;
+  padding: 7px 11px 12px !important;
+  border-bottom: 1px solid rgba(255,255,255,.16) !important;
+}
+
+body.nilo-redesign-v1 .ap-side-logo img {
+  width: 210px !important;
+  max-width: 100% !important;
+  max-height: 66px !important;
+  filter: drop-shadow(0 5px 5px rgba(0,0,0,.14)) !important;
+}
+
+body.nilo-redesign-v1 .main-nav {
+  padding: 8px 14px !important;
+}
+
+body.nilo-redesign-v1 .ap-nav-title {
+  margin: 16px 10px 7px !important;
+  color: #a9d7ff !important;
+  font-size: 10px !important;
+  font-weight: 900 !important;
+  letter-spacing: .16em !important;
+}
+
+body.nilo-redesign-v1 .nav-item {
+  min-height: 46px !important;
+  margin: 4px 0 !important;
+  padding: 8px 10px !important;
+  border-radius: 14px !important;
+  color: #d9ecff !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+  letter-spacing: .01em !important;
+}
+
+body.nilo-redesign-v1 .nav-item:hover {
+  background: rgba(255,255,255,.12) !important;
+  transform: translateX(2px) !important;
+}
+
+body.nilo-redesign-v1 .nav-item.active {
+  background: #ffffff !important;
+  color: var(--nilo-navy) !important;
+  box-shadow: 0 8px 20px rgba(2, 26, 66, .18) !important;
+}
+
+body.nilo-redesign-v1 .nav-item.active .nav-ico {
+  background: var(--nilo-yellow) !important;
+  color: var(--nilo-navy) !important;
+}
+
+body.nilo-redesign-v1 .nav-ico {
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 10px !important;
+  color: #bde1ff !important;
+}
+
+body.nilo-redesign-v1 .nav-badge {
+  min-width: 21px !important;
+  height: 21px !important;
+  border-radius: 999px !important;
+  background: #61d3ee !important;
+  color: #063267 !important;
+  font-size: 10px !important;
+  font-weight: 950 !important;
+}
+
+body.nilo-redesign-v1 .ap-side-branding {
+  margin: 4px 8px 6px !important;
+  gap: 9px !important;
+}
+
+body.nilo-redesign-v1 .ap-triela-box {
+  height: 48px !important;
+  border: 0 !important;
+  border-radius: 13px !important;
+  background: rgba(255,255,255,.10) !important;
+  box-shadow: none !important;
+}
+
+body.nilo-redesign-v1 .ap-triela-box img {
+  width: 168px !important;
+  height: 38px !important;
+}
+
+body.nilo-redesign-v1 .ap-mascot-stage {
+  position: relative !important;
+  width: 100% !important;
+  height: 186px !important;
+  overflow: hidden !important;
+  display: grid !important;
+  place-items: end center !important;
+  border: 1px solid rgba(255,255,255,.16) !important;
+  border-radius: 20px !important;
+  background: linear-gradient(145deg, #0c5bac 0%, #0c468f 54%, #082f70 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.13), 0 12px 25px rgba(3,29,72,.18) !important;
+}
+
+body.nilo-redesign-v1 .ap-mascot-stage::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 18px 15px auto auto !important;
+  width: 76px !important;
+  height: 76px !important;
+  border-radius: 50% !important;
+  background: rgba(255,213,26,.16) !important;
+  filter: blur(2px) !important;
+}
+
+body.nilo-redesign-v1 .ap-mascot-stage::after {
+  content: "" !important;
+  position: absolute !important;
+  left: 50% !important;
+  bottom: 9px !important;
+  width: 105px !important;
+  height: 15px !important;
+  border-radius: 50% !important;
+  background: rgba(1,20,55,.40) !important;
+  transform: translateX(-50%) !important;
+  filter: blur(5px) !important;
+  animation: nilo-walk-shadow 1.15s ease-in-out infinite !important;
+}
+
+body.nilo-redesign-v1 .ap-mascot {
+  position: relative !important;
+  z-index: 1 !important;
+  width: 150px !important;
+  height: 184px !important;
+  margin: 0 auto !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  filter: drop-shadow(0 8px 8px rgba(0,0,0,.18)) !important;
+  transform-origin: center bottom !important;
+  animation: nilo-walk 1.15s ease-in-out infinite !important;
+}
+
+@keyframes nilo-walk {
+  0%, 100% { transform: translate3d(-2px, 1px, 0) rotate(-1deg); }
+  25% { transform: translate3d(2px, -2px, 0) rotate(1deg); }
+  50% { transform: translate3d(3px, 1px, 0) rotate(-.5deg); }
+  75% { transform: translate3d(-3px, -2px, 0) rotate(1deg); }
+}
+
+@keyframes nilo-walk-shadow {
+  0%, 100% { transform: translateX(-50%) scaleX(1); opacity: .42; }
+  50% { transform: translateX(-50%) scaleX(.78); opacity: .25; }
+}
+
+body.nilo-redesign-v1 .ap-status-card {
+  min-height: 54px !important;
+  border: 1px solid rgba(255,255,255,.14) !important;
+  border-radius: 14px !important;
+  background: rgba(2,24,61,.25) !important;
+}
+
+body.nilo-redesign-v1 .main-content {
+  max-width: none !important;
+  padding: 0 32px 48px !important;
+}
+
+body.nilo-redesign-v1 .topbar {
+  min-height: 86px !important;
+  margin: 0 -32px 22px !important;
+  padding: 18px 32px 16px !important;
+  background: rgba(249,252,255,.92) !important;
+  border-bottom: 1px solid var(--nilo-line) !important;
+  box-shadow: 0 5px 20px rgba(25,75,125,.04) !important;
+}
+
+body.nilo-redesign-v1 .topbar-title h1 {
+  color: var(--nilo-ink) !important;
+  font-size: clamp(25px, 2.3vw, 34px) !important;
+  font-weight: 900 !important;
+  letter-spacing: -.045em !important;
+}
+
+body.nilo-redesign-v1 .topbar-title p {
+  color: var(--nilo-muted) !important;
+  font-size: 13px !important;
+}
+
+body.nilo-redesign-v1 .ap-greeting {
+  display: block !important;
+  margin-bottom: 5px !important;
+  color: var(--nilo-blue) !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+  letter-spacing: .04em !important;
+  text-transform: uppercase !important;
+}
+
+body.nilo-redesign-v1 .topbar-actions {
+  gap: 10px !important;
+}
+
+body.nilo-redesign-v1 .btn {
+  min-height: 42px !important;
+  padding: 10px 15px !important;
+  border-radius: 12px !important;
+  font-size: 12px !important;
+  font-weight: 850 !important;
+}
+
+body.nilo-redesign-v1 .btn.primary {
+  background: linear-gradient(135deg, #0b72d5, #0750a5) !important;
+  box-shadow: 0 8px 18px rgba(8,84,170,.19) !important;
+}
+
+body.nilo-redesign-v1 .btn.primary:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 11px 22px rgba(8,84,170,.25) !important;
+}
+
+body.nilo-redesign-v1 .filter-panel.card {
+  margin: 0 0 22px !important;
+  padding: 16px 18px !important;
+  border: 1px solid var(--nilo-line) !important;
+  border-radius: 17px !important;
+  background: #ffffff !important;
+  box-shadow: 0 7px 20px rgba(21,67,121,.05) !important;
+}
+
+body.nilo-redesign-v1 input,
+body.nilo-redesign-v1 select,
+body.nilo-redesign-v1 textarea {
+  min-height: 42px !important;
+  border: 1px solid #cddded !important;
+  border-radius: 11px !important;
+  background: #fbfdff !important;
+  color: var(--nilo-ink) !important;
+  font-size: 13px !important;
+}
+
+body.nilo-redesign-v1 input:focus,
+body.nilo-redesign-v1 select:focus,
+body.nilo-redesign-v1 textarea:focus {
+  border-color: #5b9fe4 !important;
+  box-shadow: 0 0 0 4px rgba(11,111,206,.13) !important;
+}
+
+body.nilo-redesign-v1 .card,
+body.nilo-redesign-v1 .panel,
+body.nilo-redesign-v1 .table-card,
+body.nilo-redesign-v1 .dashboard-card,
+body.nilo-redesign-v1 .metric-card,
+body.nilo-redesign-v1 .management-panel,
+body.nilo-redesign-v1 .v16-card {
+  border: 1px solid var(--nilo-line) !important;
+  border-radius: var(--nilo-radius) !important;
+  box-shadow: var(--nilo-shadow) !important;
+}
+
+body.nilo-redesign-v1 .card-head h2,
+body.nilo-redesign-v1 .card-head h3,
+body.nilo-redesign-v1 .panel h2,
+body.nilo-redesign-v1 .panel h3,
+body.nilo-redesign-v1 .section-title,
+body.nilo-redesign-v1 .table-title {
+  color: var(--nilo-ink) !important;
+  font-weight: 900 !important;
+  letter-spacing: -.025em !important;
+}
+
+body.nilo-redesign-v1 table tbody tr {
+  background: #fbfdff !important;
+}
+
+body.nilo-redesign-v1 table tbody tr:hover {
+  background: var(--nilo-sky) !important;
+}
+
+body.nilo-redesign-v1 .hero-strip,
+body.nilo-redesign-v1 .cycle-hero,
+body.nilo-redesign-v1 .mileage-hero,
+body.nilo-redesign-v1 .route-history-hero,
+body.nilo-redesign-v1 .trash-hero {
+  border-radius: 22px !important;
+  background: linear-gradient(125deg, #06347a 0%, #0b6fce 72%, #20b9d6 100%) !important;
+  box-shadow: 0 18px 34px rgba(8,73,150,.18) !important;
+}
+
+body.nilo-redesign-v1 .modal {
+  border: 1px solid var(--nilo-line) !important;
+  border-radius: 22px !important;
+  box-shadow: 0 28px 70px rgba(5,38,88,.25) !important;
+}
+
+body.nilo-redesign-v1 .modal-head {
+  background: linear-gradient(135deg, #06347a, #0b72d5) !important;
+}
+
+@media (max-width: 1100px) {
+  body.nilo-redesign-v1 { --sidebar: 260px; }
+  body.nilo-redesign-v1 .sidebar { width: 260px !important; }
+  body.nilo-redesign-v1 .main-content { padding-left: 22px !important; padding-right: 22px !important; }
+  body.nilo-redesign-v1 .topbar { margin-left: -22px !important; margin-right: -22px !important; padding-left: 22px !important; padding-right: 22px !important; }
+}
+
+@media (max-width: 620px) {
+  body.nilo-redesign-v1 .main-content { padding: 0 12px 112px !important; }
+  body.nilo-redesign-v1 .topbar { margin: 0 -12px 12px !important; padding: 15px 16px 18px !important; }
+  body.nilo-redesign-v1 .ap-mascot-stage { height: 172px !important; }
+  body.nilo-redesign-v1 .ap-mascot { width: 138px !important; height: 170px !important; }
+  body.nilo-redesign-v1 .filter-panel.card { margin-bottom: 12px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.nilo-redesign-v1 *,
+  body.nilo-redesign-v1 *::before,
+  body.nilo-redesign-v1 *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .001ms !important;
+  }
+}

@@ -1,19 +1,19 @@
 /**
- * NILO ENTREGAS • V36.0.0 • IDENTIDADE NILO ATUALIZADA
+ * NILO ENTREGAS • V37.0.0 • REDESIGN VISUAL NILO
  * ------------------------------------------------------------
  * Implementa o pacote visual aprovado (desktop + mobile) sem
  * gravar dados, sem alterar IndexedDB/Supabase e sem remover ações.
  */
 (() => {
   'use strict';
-  const VERSION = '36.0.0';
+  const VERSION = '37.0.0';
   const q = (s,r=document) => r.querySelector(s);
   const qa = (s,r=document) => [...r.querySelectorAll(s)];
   const A = {
-    nilo:'logo-nilo-novo.png?v=36.0.0',
+    nilo:'logo-nilo-novo.png?v=37.0.0',
     triela:'logo-triela-aprovada.png?v=35.0.0',
-    mascot:'mascote-nilo-novo.jpeg?v=36.0.0',
-    mascotAvatar:'mascote-nilo-rosto-novo.jpeg?v=36.0.0'
+    mascot:'mascote-nilo-novo.jpeg?v=37.0.0',
+    mascotAvatar:'mascote-nilo-rosto-novo.jpeg?v=37.0.0'
   };
 
   const icons = {
@@ -36,7 +36,7 @@
   };
 
   const titleMap = {
-    today:['Central de Operação','O que está acontecendo agora, o que precisa de ação e qual é o próximo passo.'],
+    today:['Central Operacional','O que está acontecendo agora, o que precisa de ação e qual é o próximo passo.'],
     deliveries:['Entregas & Programadas','Registre novas compras, acompanhe entregas de hoje e visualize programações futuras.'],
     scheduled:['Entregas & Programadas','Registre novas compras, acompanhe entregas de hoje e visualize programações futuras.'],
     pending:['Entregas & Programadas','Pendências, devoluções e próximas ações da operação.'],
@@ -53,13 +53,18 @@
   };
 
   const labelMap = {
-    today:'Central de Operação',deliveries:'Entregas',scheduled:'Programadas',pending:'Pendências',cycles:'Rotas & Ciclos',
+    today:'Central Operacional',deliveries:'Entregas',scheduled:'Programadas',pending:'Pendências',cycles:'Rotas & Ciclos',
     'route-history':'Histórico de rotas',odometer:'Quilometragem & Frota',dashboard:'Desempenho',reports:'Relatórios',
     neighborhoods:'Análise por bairro',costs:'Custos',trace:'Pesquisar entregas',settings:'Administração & Cadastros',trash:'Lixeira'
   };
 
   let scheduled = false;
   let applying = false;
+
+  function greeting(){
+    const hour = new Date().getHours();
+    return hour < 12 ? 'Bom dia, Prevenção!' : hour < 18 ? 'Boa tarde, Prevenção!' : 'Boa noite, Prevenção!';
+  }
 
   function setText(el, value){ if(el && el.textContent !== value) el.textContent = value; }
   function activeView(){ return q('#mainNav .nav-item.active')?.dataset.view || document.body.dataset.apView || 'today'; }
@@ -90,7 +95,7 @@
     const byView=new Map(buttons.map(b=>[b.dataset.view,b]));
     buttons.forEach(b=>{
       const v=b.dataset.view; const lab=menuLabel(b);
-      const visibleLabels={today:'Central de Operação',deliveries:'Entregas',cycles:'Roteirização',trace:'Pesquisar entregas',dashboard:'Desempenho',reports:'Relatórios',odometer:'Quilometragem & Frota',settings:'Administração & Cadastros'};
+      const visibleLabels={today:'Central Operacional',deliveries:'Entregas',cycles:'Roteirização',trace:'Pesquisar entregas',dashboard:'Desempenho',reports:'Relatórios',odometer:'Quilometragem & Frota',settings:'Administração & Cadastros'};
       if(lab && visibleLabels[v]) setText(lab,visibleLabels[v]);
       const ico=q('.nav-ico',b); if(ico && icons[v]) ico.innerHTML=icons[v];
       b.title=visibleLabels[v]||labelMap[v]||lab?.textContent||v||'Menu'; b.remove();
@@ -113,7 +118,7 @@
     const box=document.createElement('div'); box.className='ap-side-branding';
     box.innerHTML=`
       <div class="ap-triela-box"><img src="${A.triela}" alt="Triela Soluções"></div>
-      <img class="ap-mascot" src="${A.mascot}" alt="Mascote Nilo">
+      <div class="ap-mascot-stage" aria-label="Mascote Nilo em movimento"><img class="ap-mascot" src="${A.mascot}" alt="Mascote Nilo caminhando"></div>
       <div class="ap-status-card"><div class="ap-status-copy"><div class="ap-status-title">Modo local <span>•</span> offline <i></i></div><small>Operação • sincronização • Layout V33</small></div><span class="ap-status-icon">⇩</span></div>`;
     sidebar.appendChild(box);
     syncStatus();
@@ -136,7 +141,7 @@
       top.insertBefore(b,title);
     }
     const copy=q(':scope > div',title); if(copy && !q('.ap-greeting',copy)){
-      const g=document.createElement('span'); g.className='ap-greeting'; g.textContent='Olá, Prevenção! 👋'; copy.prepend(g);
+      const g=document.createElement('span'); g.className='ap-greeting'; g.textContent=`${greeting()} 👋`; copy.prepend(g);
     }
     if(!q('.ap-top-collapsed-brands',top)){
       const cb=document.createElement('div'); cb.className='ap-top-collapsed-brands'; cb.innerHTML=`<img src="${A.nilo}" alt="Nilo"><span></span><img src="${A.triela}" alt="Triela">`;
@@ -144,7 +149,7 @@
     }
     if(!q('.ap-mobile-brand',top)){
       const m=document.createElement('div'); m.className='ap-mobile-brand';
-      m.innerHTML=`<div class="ap-mobile-brand-row"><div class="ap-mobile-brand-logos"><img class="ap-mobile-nilo" src="${A.nilo}" alt="Nilo Supermercado"><span class="ap-mobile-brand-sep"></span><img class="ap-mobile-triela" src="${A.triela}" alt="Triela"></div><div class="ap-mobile-tools"><span class="ap-mobile-bell">♧</span><img class="ap-mobile-avatar" src="${A.mascotAvatar}" alt="Mascote Nilo"></div></div><div class="ap-mobile-greeting"><strong>Olá, Prevenção! 👋</strong><span>Bem-vindo ao Sistema de Entregas</span><small>Ambiente real</small></div>`;
+      m.innerHTML=`<div class="ap-mobile-brand-row"><div class="ap-mobile-brand-logos"><img class="ap-mobile-nilo" src="${A.nilo}" alt="Nilo Supermercado"><span class="ap-mobile-brand-sep"></span><img class="ap-mobile-triela" src="${A.triela}" alt="Triela"></div><div class="ap-mobile-tools"><span class="ap-mobile-bell">♧</span><img class="ap-mobile-avatar" src="${A.mascotAvatar}" alt="Mascote Nilo"></div></div><div class="ap-mobile-greeting"><strong>${greeting()} 👋</strong><span>Bem-vindo ao Sistema de Entregas</span><small>Ambiente real</small></div>`;
       top.prepend(m);
     }
   }
@@ -273,7 +278,7 @@
   function apply(){
     if(applying) return; applying=true;
     try{
-      document.body.classList.add('nilo-v33-exact');
+      document.body.classList.add('nilo-v33-exact','nilo-redesign-v1');
       if(innerWidth>900 && !document.body.dataset.apInitial){document.body.dataset.apInitial='1';document.body.classList.remove('ap-menu-collapsed')}
       ensureSidebarBrand(); organizeNav(); applyIcons(); ensureBottomBranding(); ensureTopbar(); ensureMobileDock(); decorateRegister(); syncPage(); syncStatus();
     } finally { applying=false; }
