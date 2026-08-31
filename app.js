@@ -1,4 +1,4 @@
-import { ensureSeed } from './db.js';
+import { ensureSeed, ensureUsers, Users, SyncQueue } from './db.js';
 import { $, $$, toast } from './helpers.js';
 import * as V from './views.js';
 
@@ -13,7 +13,11 @@ function boot() {
   setTimeout(async () => {
     $('#bootScreen').classList.add('hidden');
     await ensureSeed();
-    startApp();
+    const hasUsers = await ensureUsers();
+    wireGlobalActions();
+    if (!hasUsers) { $('#loginHint').textContent = 'Crie o primeiro acesso de administrador neste aparelho.'; $('#loginForm button').textContent = 'Criar acesso'; }
+    if (sessionStorage.getItem('orbita_session')) startApp();
+    else $('#loginScreen').classList.remove('hidden');
   }, 450);
 
   updateConnection();
@@ -24,17 +28,38 @@ function boot() {
 function updateConnection() {
   const dot = $('#connDot'), label = $('#connLabel');
   if (!dot) return;
-  if (navigator.onLine) { dot.className = 'conn-dot online'; label.textContent = 'Online • salvo neste aparelho'; }
-  else { dot.className = 'conn-dot offline'; label.textContent = 'Offline • salvo neste aparelho'; }
+  if (navigator.onLine) { dot.className = 'conn-dot online'; label.textContent = 'Online • fila pronta'; retrySync(); }
+  else { dot.className = 'conn-dot offline'; label.textContent = 'Offline • alterações protegidas'; }
+}
+
+async function retrySync() {
+  if (!navigator.onLine) return;
+  try { const count = await SyncQueue.retryAll(); if (count) toast(`${count} alteração(ões) marcadas para sincronização.`, 'success'); } catch { /* IndexedDB pode ainda estar abrindo */ }
 }
 
 /* ---------- app shell ---------- */
 function startApp() {
   $('#appShell').classList.remove('hidden');
+  applyPermissions();
   renderEnvPill();
   wireNav();
-  wireGlobalActions();
+  $('#newDeliveryBtn')?.addEventListener('click', () => V.openDeliveryModal());
+  wireSession();
   render();
+}
+
+function applyPermissions() {
+  const role = JSON.parse(sessionStorage.getItem('orbita_session') || '{}').role || 'consulta';
+  const adminOnly = new Set(['registry', 'audit', 'trash', 'settings']);
+  $$('.nav-item[data-view]').forEach((btn) => { btn.hidden = adminOnly.has(btn.dataset.view) && !['administrador', 'lider'].includes(role); });
+  if (role === 'consulta') $('#newDeliveryBtn').hidden = true;
+}
+
+function wireSession() {
+  const session = JSON.parse(sessionStorage.getItem('orbita_session') || '{}');
+  const chip = $('#userChip');
+  if (chip) chip.textContent = `${session.name || 'Usuário'} · ${session.role || 'consulta'}`;
+  $('#logoutBtn')?.addEventListener('click', () => { sessionStorage.removeItem('orbita_session'); location.reload(); });
 }
 
 function renderEnvPill() {
@@ -62,7 +87,23 @@ function wireNav() {
 }
 
 function wireGlobalActions() {
-  $('#newDeliveryBtn').addEventListener('click', () => V.openDeliveryModal());
+  $('#loginForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = Object.fromEntries(new FormData(e.target).entries());
+    const users = await Users.all();
+    if (!users.length) {
+      if (!fd.username || !fd.password || fd.password.length < 6) return toast('Informe usuário e senha com pelo menos 6 caracteres.', 'error');
+      const created = await Users.add({ name: 'Administrador', username: fd.username.trim(), password: fd.password, role: 'administrador', active: true });
+      sessionStorage.setItem('orbita_session', JSON.stringify({ id: created.id, name: created.name, role: created.role }));
+      localStorage.setItem('orbita_actor_id', created.id); localStorage.setItem('orbita_actor_name', created.name);
+      $('#loginScreen').classList.add('hidden'); startApp(); return;
+    }
+    const user = users.find((u) => u.username === fd.username && u.password === fd.password && u.active !== false);
+    if (!user) return toast('Usuário ou senha inválidos.', 'error');
+    sessionStorage.setItem('orbita_session', JSON.stringify({ id: user.id, name: user.name, role: user.role }));
+    localStorage.setItem('orbita_actor_id', user.id); localStorage.setItem('orbita_actor_name', user.name);
+    $('#loginScreen').classList.add('hidden'); startApp();
+  });
 }
 
 /* ---------- modal genérico ---------- */
@@ -117,6 +158,8 @@ async function render() {
   };
 
   const [t, s, renderFn, wireFn] = routes[currentView] || routes.central;
+  const role = JSON.parse(sessionStorage.getItem('orbita_session') || '{}').role || 'consulta';
+  if (['registry', 'audit', 'trash', 'settings'].includes(currentView) && !['administrador', 'lider'].includes(role)) { currentView = 'central'; return render(); }
   title.textContent = t;
   sub.textContent = s;
   view.innerHTML = await renderFn();

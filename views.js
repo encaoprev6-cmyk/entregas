@@ -225,6 +225,13 @@ function deliveryStatusActionsHtml(record) {
   if (record.status === 'finalizada') {
     buttons.push('<button type="button" class="btn-ghost btn-small" data-action="retorno">Registrar retorno</button>');
   }
+  if (record.size === 'grande' && record.status === 'em_rota') {
+    const tripButtons = (record.trips || []).map((trip) => {
+      const state = trip.arrivedAt ? 'Chegada registrada' : trip.leftStoreAt ? 'Registrar chegada' : 'Registrar saída';
+      return `<button type="button" class="btn-ghost btn-small" data-trip-action="${trip.arrivedAt ? '' : trip.leftStoreAt ? 'arrive' : 'leave'}" data-trip-index="${trip.tripIndex}" ${trip.arrivedAt ? 'disabled' : ''}>Viagem ${trip.tripIndex}: ${state}</button>`;
+    }).join('');
+    buttons.push(`<div style="width:100%;margin-top:8px"><label>Viagens da entrega grande</label><div style="display:flex;gap:6px;flex-wrap:wrap">${tripButtons}</div></div>`);
+  }
   if (record.type === 'agendada' || record.status === 'programada') {
     buttons.push('<button type="button" class="btn-ghost btn-small" data-action="reagendar">Reagendar</button>');
   }
@@ -245,10 +252,26 @@ function wireDeliveryStatusActions(record) {
     guardClick(btn, async () => {
       const action = btn.dataset.action;
       if (action === 'em_rota') { await Deliveries.changeStatus(record.id, 'em_rota'); toast('Entrega em rota.', 'success'); closeModal(); refreshApp(); }
-      if (action === 'finalizada') { await Deliveries.changeStatus(record.id, 'finalizada'); toast('Entrega finalizada.', 'success'); closeModal(); refreshApp(); }
+      if (action === 'finalizada') {
+        if (record.size === 'grande' && (record.trips || []).some((trip) => !trip.arrivedAt)) return toast('Registre a chegada de todas as viagens antes de finalizar.', 'error');
+        await Deliveries.changeStatus(record.id, 'finalizada'); toast('Entrega finalizada.', 'success'); closeModal(); refreshApp();
+      }
       if (action === 'retirada') openRetiradaFlow(record);
       if (action === 'retorno') openRetornoFlow(record);
       if (action === 'reagendar') openReagendarFlow(record);
+    });
+  });
+  $$('#modalBody [data-trip-action]').forEach((btn) => {
+    guardClick(btn, async () => {
+      const index = Number(btn.dataset.tripIndex);
+      const trips = (record.trips || []).map((t) => ({ ...t }));
+      const trip = trips.find((t) => t.tripIndex === index);
+      if (!trip) return;
+      if (btn.dataset.tripAction === 'leave') trip.leftStoreAt = new Date().toISOString();
+      if (btn.dataset.tripAction === 'arrive') trip.arrivedAt = new Date().toISOString();
+      await Deliveries.update(record.id, { trips });
+      toast(btn.dataset.tripAction === 'leave' ? `Saída da viagem ${index} registrada.` : `Chegada da viagem ${index} registrada.`, 'success');
+      const refreshed = await Deliveries.get(record.id); openDeliveryModal(refreshed);
     });
   });
 }
@@ -803,15 +826,23 @@ export async function renderDashboard() {
    ========================================================= */
 export async function renderSearch() {
   return `
-    <input id="searchInput" placeholder="Buscar por compra, cliente, telefone, endereço, bairro, veículo, entregador, status…" style="width:100%;padding:11px 14px;border-radius:9px;border:1px solid var(--line);margin-bottom:14px;font-size:13px" />
+    <div class="search-grid">
+      <input id="searchInput" placeholder="Compra, chegada, cupom, DOC, cliente, endereço…" />
+      <select id="searchStatus"><option value="">Todos os status</option>${Object.entries(STATUS_META).map(([k,v])=>'<option value="'+k+'">'+v.label+'</option>').join('')}</select>
+      <select id="searchPriority"><option value="">Todas as prioridades</option><option value="alta">Alta</option><option value="normal">Normal</option></select>
+      <input id="searchDate" type="date" title="Filtrar por data" />
+    </div>
     <div id="searchResults"></div>
   `;
 }
 export function wireSearchEvents() {
   const input = $('#searchInput');
   if (!input) return;
-  input.addEventListener('input', async () => {
+  const runSearch = async () => {
     const q = input.value.trim().toLowerCase();
+    const status = $('#searchStatus').value;
+    const priority = $('#searchPriority').value;
+    const date = $('#searchDate').value;
     const env = getEnv();
     const rows = await Deliveries.active(env);
     const neighborhoods = await Neighborhoods.all();
@@ -821,16 +852,22 @@ export function wireSearchEvents() {
     const vName = (id) => vehicles.find((v) => v.id === id)?.label || '';
     const dName = (id) => drivers.find((d) => d.id === id)?.name || '';
 
-    const filtered = !q ? [] : rows.filter((r) => [
+    const filtered = rows.filter((r) => {
+      const haystack = [
       r.purchaseNumber, r.arrivalNumber, r.coupon, r.doc, r.pdv, r.clientName, r.phone,
       r.street, nName(r.neighborhoodId), vName(r.vehicleId), dName(r.driverId), r.status, r.priority,
-    ].some((f) => String(f ?? '').toLowerCase().includes(q)));
+      r.cycleId, r.notes,
+      ].some((f) => String(f ?? '').toLowerCase().includes(q));
+      return (!q || haystack) && (!status || r.status === status) && (!priority || r.priority === priority) && (!date || String(r.entryTime).slice(0,10) === date);
+    });
 
-    $('#searchResults').innerHTML = !q
-      ? '<div class="empty-state"><strong>Digite para buscar</strong>Combine termos: nome, bairro, status, número da compra, etc.</div>'
+    $('#searchResults').innerHTML = (!q && !status && !priority && !date)
+      ? '<div class="empty-state"><strong>Use os filtros para buscar</strong>Combine texto, status, prioridade e data.</div>'
       : (filtered.length ? await miniList(filtered) : '<div class="empty-state"><strong>Nada encontrado</strong></div>');
     wireCentralEvents();
-  });
+  };
+  $$('.search-grid')[0].addEventListener('input', runSearch);
+  $$('.search-grid')[0].addEventListener('change', runSearch);
 }
 
 /* =========================================================

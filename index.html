@@ -20,6 +20,20 @@
     </div>
   </div>
 
+  <div id="loginScreen" class="boot-screen hidden">
+    <div class="boot-card login-card">
+      <div class="brand-logo-chip" style="padding:14px 18px"><img src="assets/brand/nilo-logo.png" alt="Nilo Supermercado" /></div>
+      <h1>Acesso seguro</h1>
+      <p id="loginHint">Entre com seu usuário para acessar a operação.</p>
+      <form id="loginForm" class="login-form">
+        <label>Usuário<input name="username" autocomplete="username" required placeholder="admin" /></label>
+        <label>Senha<input name="password" type="password" autocomplete="current-password" required placeholder="••••••••" /></label>
+        <button class="btn-primary" type="submit">Entrar</button>
+      </form>
+      <small>Primeiro acesso: crie seu usuário e senha localmente.</small>
+    </div>
+  </div>
+
   <div id="appShell" class="shell hidden">
     <aside class="sidebar" id="sidebar">
       <div>
@@ -71,6 +85,8 @@
           </div>
         </div>
         <div class="topbar-actions">
+          <span class="user-chip" id="userChip"></span>
+          <button class="btn-ghost btn-small" id="logoutBtn" title="Encerrar sessão">Sair</button>
           <button class="btn-primary" id="newDeliveryBtn">＋ Registrar entrega</button>
         </div>
       </header>

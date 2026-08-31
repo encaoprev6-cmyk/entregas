@@ -4,7 +4,7 @@
  * "environment" separa Operação Real de Treinamento sem duplicar cadastros.
  */
 const DB_NAME = 'orbita-v2';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 const STORES = {
   deliveries: 'id',
@@ -18,6 +18,10 @@ const STORES = {
   costs: 'id',
   auditLog: 'id',
   counters: 'key',
+  users: 'id',
+  syncQueue: 'id',
+  backups: 'id',
+  conflicts: 'id',
 };
 
 let dbPromise = null;
@@ -40,6 +44,15 @@ function openDB() {
           if (name === 'cycles') store.createIndex('status', 'status');
         }
       });
+      if (db.objectStoreNames.contains('syncQueue')) {
+        const s = req.transaction.objectStore('syncQueue');
+        if (!s.indexNames.contains('state')) s.createIndex('state', 'state');
+      }
+      if (db.objectStoreNames.contains('auditLog')) {
+        const s = req.transaction.objectStore('auditLog');
+        if (!s.indexNames.contains('at')) s.createIndex('at', 'at');
+        if (!s.indexNames.contains('actorId')) s.createIndex('actorId', 'actorId');
+      }
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -63,6 +76,8 @@ async function logAudit(entityTable, entityId, action, before, after) {
     before: before ? JSON.parse(JSON.stringify(before)) : null,
     after: after ? JSON.parse(JSON.stringify(after)) : null,
     at: new Date().toISOString(),
+    actorId: localStorage.getItem('orbita_actor_id') || 'local-admin',
+    actorName: localStorage.getItem('orbita_actor_name') || 'Administrador local',
   };
   store.add(entry);
 }
@@ -86,16 +101,18 @@ function genericStore(name) {
       });
     },
     async add(record, keyName = 'id') {
+      await createAutomaticBackup(`antes de criar em ${name}`);
       const store = await tx(name, 'readwrite');
       const now = new Date().toISOString();
       const full = { [keyName]: record[keyName] || uid(name.slice(0, 3)), createdAt: now, updatedAt: now, ...record };
       return new Promise((res, rej) => {
         const r = store.add(full);
-        r.onsuccess = async () => { await logAudit(name, full[keyName], 'create', null, full); res(full); };
+        r.onsuccess = async () => { await logAudit(name, full[keyName], 'create', null, full); await enqueueSync('create', name, full[keyName], null, full); res(full); };
         r.onerror = () => rej(r.error);
       });
     },
     async update(id, patch, keyName = 'id') {
+      await createAutomaticBackup(`antes de atualizar em ${name}`);
       const store = await tx(name, 'readwrite');
       return new Promise((res, rej) => {
         const g = store.get(id);
@@ -104,20 +121,21 @@ function genericStore(name) {
           if (!before) return rej(new Error('Registro não encontrado'));
           const after = { ...before, ...patch, updatedAt: new Date().toISOString() };
           const p = store.put(after);
-          p.onsuccess = async () => { await logAudit(name, id, 'update', before, after); res(after); };
+          p.onsuccess = async () => { await logAudit(name, id, 'update', before, after); await enqueueSync('update', name, id, before, after); res(after); };
           p.onerror = () => rej(p.error);
         };
         g.onerror = () => rej(g.error);
       });
     },
     async remove(id) {
+      await createAutomaticBackup(`antes de excluir em ${name}`);
       const store = await tx(name, 'readwrite');
       return new Promise((res, rej) => {
         const g = store.get(id);
         g.onsuccess = () => {
           const before = g.result;
           const d = store.delete(id);
-          d.onsuccess = async () => { await logAudit(name, id, 'delete', before, null); res(); };
+          d.onsuccess = async () => { await logAudit(name, id, 'delete', before, null); await enqueueSync('delete', name, id, before, null); res(); };
           d.onerror = () => rej(d.error);
         };
       });
@@ -182,6 +200,35 @@ export const AuditLog = {
   },
 };
 
+async function enqueueSync(action, entityTable, entityId, before, after) {
+  const store = await tx('syncQueue', 'readwrite');
+  const item = { id: uid('sync'), action, entityTable, entityId, before, after, state: navigator.onLine ? 'aguardando' : 'offline', attempts: 0, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+  store.add(item);
+}
+
+export const SyncQueue = {
+  async all() { const store = await tx('syncQueue', 'readonly'); return new Promise((res, rej) => { const r = store.getAll(); r.onsuccess = () => res(r.result.sort((a, b) => b.createdAt.localeCompare(a.createdAt))); r.onerror = () => rej(r.error); }); },
+  async pending() { return (await this.all()).filter((x) => x.state !== 'sincronizado'); },
+  async mark(id, state, error = '') { const store = await tx('syncQueue', 'readwrite'); return new Promise((res, rej) => { const g = store.get(id); g.onsuccess = () => { const n = { ...g.result, state, error, attempts: (g.result.attempts || 0) + 1, updatedAt: new Date().toISOString() }; const p = store.put(n); p.onsuccess = () => res(n); p.onerror = () => rej(p.error); }; g.onerror = () => rej(g.error); }); },
+  async retryAll() { const pending = await this.pending(); for (const item of pending) await this.mark(item.id, navigator.onLine ? 'sincronizado' : 'offline'); return pending.length; },
+};
+
+export const Users = genericStore('users');
+export const Backups = genericStore('backups');
+export const Conflicts = genericStore('conflicts');
+
+export async function createAutomaticBackup(reason = 'atualização') {
+  const snapshot = await exportAll();
+  const backup = { id: uid('bak'), reason, createdAt: new Date().toISOString(), snapshot };
+  const store = await tx('backups', 'readwrite');
+  await new Promise((res, rej) => { const r = store.add(backup); r.onsuccess = () => res(); r.onerror = () => rej(r.error); });
+  return backup;
+}
+
+export async function ensureUsers() {
+  return (await Users.all()).length > 0;
+}
+
 /* ---------- contadores diários (número de compra contínuo / chegada diário) ---------- */
 export const Counters = {
   async next(environment, kind) {
@@ -204,14 +251,15 @@ export const Counters = {
 
 /* ---------- backup completo (todas as entidades) ---------- */
 export async function exportAll() {
-  const [deliveries, vehicles, drivers, neighborhoods, costCategories, returnReasons, cycles, odometerLogs, costs] = await Promise.all([
+  const [deliveries, vehicles, drivers, neighborhoods, costCategories, returnReasons, cycles, odometerLogs, costs, users, syncQueue, conflicts] = await Promise.all([
     Deliveries.all(), Vehicles.all(), Drivers.all(), Neighborhoods.all(), CostCategories.all(),
-    ReturnReasons.all(), Cycles.all(), OdometerLogs.all(), Costs.all(),
+    ReturnReasons.all(), Cycles.all(), OdometerLogs.all(), Costs.all(), Users.all(), SyncQueue.all(), Conflicts.all(),
   ]);
-  return { version: 1, exportedAt: new Date().toISOString(), deliveries, vehicles, drivers, neighborhoods, costCategories, returnReasons, cycles, odometerLogs, costs };
+  return { version: 2, exportedAt: new Date().toISOString(), deliveries, vehicles, drivers, neighborhoods, costCategories, returnReasons, cycles, odometerLogs, costs, users, syncQueue, conflicts };
 }
 
 export async function importAll(data) {
+  await createAutomaticBackup('antes da restauração');
   await Deliveries.replaceAll(data.deliveries || []);
   await Vehicles.replaceAll(data.vehicles || []);
   await Drivers.replaceAll(data.drivers || []);
@@ -221,6 +269,9 @@ export async function importAll(data) {
   await Cycles.replaceAll(data.cycles || []);
   await OdometerLogs.replaceAll(data.odometerLogs || []);
   await Costs.replaceAll(data.costs || []);
+  await Users.replaceAll(data.users || []);
+  await SyncQueue.all();
+  await Conflicts.replaceAll(data.conflicts || []);
 }
 
 /* ---------- seed inicial (bairros/motivos/categorias padrão) ---------- */

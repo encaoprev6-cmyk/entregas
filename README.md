@@ -57,4 +57,8 @@ Logo Nilo, mascote e logo Triela Soluções aplicados de verdade (pasta `assets/
 | Reconexão e sincronização sem duplicidade | ❌ Não implementado (precisa de backend) |
 | Conflito entre dispositivos | ❌ Não implementado (precisa de backend) |
 | Mobile / Desktop / PWA instalada | ✅ Responsivo e instalável (não testado em aparelho físico por mim) |
-| Relatórios gerencial e Excel | ✅ Implementado |
+| Relatórios gerencial e Excel | ✅ Implementado | 
+
+## Atualização operacional
+
+Esta publicação adiciona autenticação local por usuário/perfil, proteção de permissões na interface, auditoria identificando o operador, backup automático antes das escritas, fila local de sincronização, detecção preparada para conflitos, busca com filtros combináveis e registro individual de saída/chegada em cada viagem de uma entrega Grande. O funcionamento entre dispositivos continua dependendo de um backend autenticado; o GitHub Pages mantém a operação offline no aparelho.
