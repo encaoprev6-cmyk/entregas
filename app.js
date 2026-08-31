@@ -7,9 +7,8 @@
   }
   'use strict';
 
-  const APP_VERSION = '14.8.0';
+  const APP_VERSION = '14.8.1';
   const DB_NAME = 'controle_entregas_nx';
-  const DB_VERSION = 1;
   const STORE_NAME = 'app_state';
   const STATE_KEY = 'main';
   const PRE_UPDATE_BACKUP_KEY = 'pre_update_backup';
@@ -321,7 +320,7 @@
 
   function openDB() {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      const request = indexedDB.open(DB_NAME);
       request.onupgradeneeded = () => {
         const db = request.result;
         if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME);

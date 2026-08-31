@@ -1,11 +1,11 @@
-const CACHE_NAME = 'controle-entregas-v36-restauracao-segura';
+const CACHE_NAME = 'controle-entregas-v36-1-db-compativel';
 const APP_SHELL = [
   './',
   './index.html',
   './styles.css?v=14.8.0',
   './nilo-layout-v15.css?v=15.0.0',
   './ui-stable-v19.css?v=19.0.0',
-  './app.js?v=14.8.0',
+  './app.js?v=14.8.1',
   './route-view-stable-v19.js?v=19.0.0',
   './manifest.webmanifest',
   './favicon-v33.png?v=35.0.0',
