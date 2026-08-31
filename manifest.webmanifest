@@ -1,1 +1,25 @@
-{"name":"Controle de Entregas - Nilo","short_name":"Nilo Entregas","description":"No quieto, no quieto, o Nilo vende mais barato.","start_url":"/entregas/","display":"standalone","background_color":"#f4f7fb","theme_color":"#0b2f6b","lang":"en","scope":"/entregas/","orientation":"portrait-primary","icons":[{"src":"icon-192.png","sizes":"192x192","type":"image/png"},{"src":"icon-512.png","sizes":"512x512","type":"image/png"}]}
+{
+  "name": "Controle de Entregas • Nilo Supermercado",
+  "short_name": "Nilo Entregas",
+  "description": "Sistema de entregas, rotas GPS, frota e custos com operação offline, restauração segura, ciclos automáticos, relatórios e exportação.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#031B43",
+  "theme_color": "#062B63",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

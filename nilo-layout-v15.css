@@ -248,9 +248,7 @@ th{background:#f5f8f5!important;color:#65787a!important;border-color:#e3ebe4!imp
 }
 
 
-/* V15.1 • acesso direto sem tela de usuário/senha */
-.cloud-auth-screen{display:none!important}
-#syncAccountBtn{display:none!important}
+/* Segurança: login e conta permanecem visíveis quando a sincronização exige autenticação. */
 .connection-card{border-color:rgba(185,213,49,.20)!important}
 .connection-dot.online{
   background:var(--nilo-lime)!important;

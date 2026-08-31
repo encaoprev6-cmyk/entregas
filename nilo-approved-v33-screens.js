@@ -6,12 +6,11 @@
 (() => {
 'use strict';
 const V='35.0.0';
-const OFFICIAL_HISTORY_START='2026-09-01';
 const q=(s,r=document)=>r.querySelector(s), qa=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=(v,d=0)=>new Intl.NumberFormat('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d}).format(Number(v||0));
 const money=v=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(v||0));
-const today=()=>{const d=new Date(),z=new Date(d.getTime()-d.getTimezoneOffset()*60000),iso=z.toISOString().slice(0,10);return iso<OFFICIAL_HISTORY_START?'2026-09-01':iso};
+const today=()=>{const d=new Date(),z=new Date(d.getTime()-d.getTimezoneOffset()*60000);return z.toISOString().slice(0,10)};
 const dateBR=v=>{if(!v)return '—';const [y,m,d]=String(v).slice(0,10).split('-');return y&&m&&d?`${d}/${m}/${y}`:String(v)};
 const mins=(a,b)=>{if(!a||!b)return null;const [ah,am]=String(a).split(':').map(Number),[bh,bm]=String(b).split(':').map(Number);let n=(bh*60+bm)-(ah*60+am);if(n<0)n+=1440;return n};
 const fmtM=v=>v==null?'—':v>=60?`${Math.floor(v/60)}h ${String(Math.round(v%60)).padStart(2,'0')}min`:`${Math.round(v)}min`;
@@ -54,7 +53,7 @@ loadRange();
 function inRange(item){const d=deliveryDate(item)||item?.date||'';if(!d)return true;return (!apsRange.start||d>=apsRange.start)&&(!apsRange.end||d<=apsRange.end)}
 function customReportModal(){const nmap=neighMap(stateCache||{}),emps=empMap(stateCache||{}),vehs=vehicleMap(stateCache||{});overlayModal('Montar relatório personalizado','Escolha período, filtros e informações para o relatório.',`<div class="aps-builder"><section><h4>1. Período e filtros</h4><div class="aps-builder-grid"><label>De<input id="apsRepStart" type="date" value="${esc(apsRange.start)}"></label><label>Até<input id="apsRepEnd" type="date" value="${esc(apsRange.end)}"></label><label>Bairro<select id="apsRepNeighborhood"><option value="">Todos</option>${[...nmap].map(([id,x])=>`<option value="${esc(id)}">${esc(x.name)}</option>`).join('')}</select></label><label>Entregador<select id="apsRepDriver"><option value="">Todos</option>${[...emps].map(([id,x])=>`<option value="${esc(id)}">${esc(x.name)}</option>`).join('')}</select></label><label>Veículo<select id="apsRepVehicle"><option value="">Todos</option>${[...vehs].map(([id,x])=>`<option value="${esc(id)}">${esc(x.name)}</option>`).join('')}</select></label><label>Status<select id="apsRepStatus"><option value="">Todos</option><option>Na loja</option><option>Em rota</option><option>Finalizada</option><option>Programada</option><option>Reagendada</option><option>Devolvida</option></select></label></div></section><section><h4>2. Informações</h4><div class="aps-check-grid">${['Entregas e status','Motivos','Entregadores','Chegada ao cliente','Tempos / SLA','Custos','KM','Tentativas','Rotas','Bairros'].map((x,i)=>`<label><input type="checkbox" ${i<5?'checked':''}>${x}</label>`).join('')}</div></section><section><h4>3. Saída</h4><div class="aps-report-actions"><button class="aps-outline" data-aps-custom-preview>Visualizar</button><button class="aps-outline" data-aps-action="print-report">Imprimir</button><button class="aps-primary" data-aps-custom-export>Exportar Excel/CSV</button></div></section></div>`)}
 function exportCustomCSV(){const s=stateCache||{},nmap=neighMap(s),emps=empMap(s),vehs=vehicleMap(s),start=q('#apsRepStart')?.value||apsRange.start,end=q('#apsRepEnd')?.value||apsRange.end,nei=q('#apsRepNeighborhood')?.value||'',drv=q('#apsRepDriver')?.value||'',veh=q('#apsRepVehicle')?.value||'',st=q('#apsRepStatus')?.value||'';const rows=scoped(s,'deliveries').filter(d=>(!start||d.date>=start)&&(!end||d.date<=end)&&(!nei||d.neighborhoodId===nei)&&(!drv||d.driverId===drv)&&(!veh||d.vehicleId===veh)&&(!st||d.status===st));const head=['Data','Compra','Cupom','DOC','Caixa','Cliente','Bairro','Entregador','Veículo','Status','Compra','Saída','Chegada ao cliente','Finalização','Retorno'];const body=rows.map(d=>[d.date,d.orderNo,d.coupon,d.docNo,d.cashierNo,d.customerName,nmap.get(d.neighborhoodId)?.name||'',emps.get(d.driverId)?.name||'',vehs.get(d.vehicleId)?.name||'',d.status,d.purchaseTime,d.departureTime,arrivalTime(d),d.finalizationTime,d.returnTime]);const csv=[head,...body].map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(';')).join('\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Relatorio_Personalizado_${start||'inicio'}_${end||'fim'}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
-function scoped(s,key){const mode=s?.settings?.appMode==='training'?'training':'production';return (s?.[key]||[]).filter(x=>{if((x?.mode||'production')!==mode)return false;if(mode==='production'){const d=String(x?.date||x?.deletedAt||x?.at||'').slice(0,10);if(d&&d<OFFICIAL_HISTORY_START)return false}return true})}
+function scoped(s,key){const mode=s?.settings?.appMode==='training'?'training':'production';return (s?.[key]||[]).filter(x=>(x?.mode||'production')===mode)}
 function roots(ds){return ds.filter(d=>!d.parentId)}
 function chainKey(d){return d?.rootId||d?.id||''}
 function latestOf(root,all){const key=chainKey(root);return all.filter(x=>chainKey(x)===key).sort((a,b)=>String(a.updatedAt||a.createdAt||'').localeCompare(String(b.updatedAt||b.createdAt||''))).at(-1)||root}
@@ -84,7 +83,7 @@ function openRegister(){(q('#quickNewDeliveryBtn')||q('#mobileNewDeliveryBtn'))?
 function activeLayer(){return q('#apApprovedScreens')}
 function setNativeHidden(on){q('#view')?.classList.toggle('ap-native-screen-hidden',on);q('#globalFilterPanel')?.classList.toggle('ap-filter-native-hidden',on)}
 
-const nativeDefaultViews=new Set(['today','scheduled','pending','route-history','reports','neighborhoods','costs','trace','trash']);
+const nativeDefaultViews=new Set(['scheduled','pending','route-history','reports','neighborhoods','costs','trace','trash']);
 
 function functionalGroups(view){
  const groups={
@@ -109,7 +108,6 @@ function functionalGroups(view){
 function removeFunctionalToolbar(){q('#apFunctionalToolbar')?.remove();document.body.classList.remove('ap-native-functional')}
 function injectFunctionalToolbar(view){
  removeFunctionalToolbar();
- if(view==='today')return;
  const items=functionalGroups(view); if(!items.length)return;
  const bar=document.createElement('div');bar.id='apFunctionalToolbar';bar.className='ap-functional-toolbar';
  bar.innerHTML=`<div class="ap-functional-title"><b>FUNÇÕES COMPLETAS</b><small>Visual atual + recursos operacionais originais</small></div><div class="ap-functional-tabs">${items.map(([target,label,mode])=>{
