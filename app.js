@@ -41,6 +41,7 @@ async function retrySync() {
 function startApp() {
   $('#appShell').classList.remove('hidden');
   applyPermissions();
+  updateConnection();
   renderEnvPill();
   wireNav();
   $('#newDeliveryBtn')?.addEventListener('click', () => V.openDeliveryModal());
