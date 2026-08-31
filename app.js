@@ -7,7 +7,7 @@
   }
   'use strict';
 
-  const APP_VERSION = '14.8.1';
+  const APP_VERSION = '14.8.2';
   const DB_NAME = 'controle_entregas_nx';
   const STORE_NAME = 'app_state';
   const STATE_KEY = 'main';
@@ -17,7 +17,6 @@
   const SYNC_WORKSPACE_CODE = 'nilo-entregas';
   const SUPABASE_URL = 'https://vwwkzenvcxedxiuopsgv.supabase.co';
   const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_Vh9zdSxCUH0fMJOjf_G6Sw_UMU0t0to';
-  const SUPABASE_LOGIN_DOMAIN = 'centraltemp.invalid';
   const SYNC_COLLECTIONS = ['vehicles','neighborhoods','employees','costCategories','reasons','deliveries','cycles','routeTracks','odometerLogs','costs','audit','dayClosures','trash'];
   const YEAR_PAST_RANGE = 10;
   const YEAR_FUTURE_RANGE = 20;
@@ -583,41 +582,18 @@
   function lastCloudUsername() { try{return localStorage.getItem('delivery_last_username')||'';}catch{return '';} }
   function cloudUsername() { return cloudSession?.user?.email?.split('@')[0]||lastCloudUsername(); }
   function showCloudAuth(message='') {
-    const screen=$('#cloudAuthScreen');if(!screen)return;
-    screen.classList.remove('hidden');screen.setAttribute('aria-hidden','false');
-    $('#cloudAuthMessage').textContent=message;
-    const username=$('#cloudAuthForm [name="username"]');if(username&&!username.value)username.value=lastCloudUsername();
-    $('#continueOfflineBtn').classList.toggle('hidden',!lastCloudUsername());
-    $('#appShell').setAttribute('aria-hidden','true');
+    if(message)console.warn(message);
+    hideCloudAuth();
   }
   function hideCloudAuth() {
-    const screen=$('#cloudAuthScreen');if(!screen)return;
-    screen.classList.add('hidden');screen.setAttribute('aria-hidden','true');$('#appShell').removeAttribute('aria-hidden');
+    const screen=$('#cloudAuthScreen');
+    if(screen){screen.classList.add('hidden');screen.setAttribute('aria-hidden','true');}
+    $('#appShell')?.removeAttribute('aria-hidden');
   }
   function updateCloudAccountButton() {
     const button=$('#syncAccountBtn');if(!button)return;
     button.hidden=!cloudSession;
     if(cloudSession)button.textContent=`☁ ${cloudUsername()||'Conta'} • Sair`;
-  }
-  async function cloudLogin(event) {
-    event.preventDefault();
-    const button=$('#cloudLoginBtn'),form=event.currentTarget;
-    const values=Object.fromEntries(new FormData(form).entries());
-    const username=String(values.username||'').trim().toLowerCase();
-    if(!/^[a-z0-9._-]{3,40}$/.test(username)){showCloudAuth('Informe um usuário válido.');return;}
-    if(!navigator.onLine){showCloudAuth('Sem internet. Conecte-se para entrar pela primeira vez.');return;}
-    if(!cloudClient){showCloudAuth('O serviço de sincronização não carregou. Atualize a página com internet.');return;}
-    button.disabled=true;button.textContent='Entrando...';$('#cloudAuthMessage').textContent='';
-    try{
-      const {data,error}=await cloudClient.auth.signInWithPassword({email:`${username}@${SUPABASE_LOGIN_DOMAIN}`,password:String(values.password||'')});
-      if(error)throw error;
-      cloudSession=data.session;
-      try{localStorage.setItem('delivery_last_username',username);}catch{}
-      await connectCloudSession();
-      toast('Conta conectada. Sincronização em tempo real ativada.','success');
-    }catch(err){
-      showCloudAuth(/invalid login|credentials/i.test(err.message||'')?'Usuário ou senha incorretos.':`Não foi possível entrar: ${err.message||err}`);
-    }finally{button.disabled=false;button.textContent='Entrar e sincronizar';}
   }
   async function cloudLogout() {
     if(!cloudClient||!cloudSession)return;
@@ -627,35 +603,31 @@
     cloudSession=null;cloudWorkspace=null;syncReady=false;syncRealtimeStatus='DISCONNECTED';updateCloudAccountButton();updateConnectionStatus();showCloudAuth('Conta desconectada deste aparelho.');
   }
   function bindCloudEvents() {
-    const form=$('#cloudAuthForm');
-    if(form&&!form.dataset.bound){form.dataset.bound='true';form.addEventListener('submit',cloudLogin);}
-    const offline=$('#continueOfflineBtn');
-    if(offline&&!offline.dataset.bound){offline.dataset.bound='true';offline.addEventListener('click',()=>{hideCloudAuth();toast('Modo offline ativo. As alterações serão sincronizadas quando você entrar novamente.','warning');});}
     const account=$('#syncAccountBtn');
     if(account&&!account.dataset.bound){account.dataset.bound='true';account.addEventListener('click',cloudLogout);}
   }
   async function initializeCloudSync() {
     bindCloudEvents();
     if(!window.supabase?.createClient){
-      showCloudAuth(lastCloudUsername()?'Biblioteca online indisponível. Você pode continuar com os dados deste aparelho.':'Conecte-se à internet para ativar o acesso em tempo real.');
+      hideCloudAuth();updateCloudAccountButton();updateConnectionStatus();
       return;
     }
     cloudClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{storageKey:'nilo-delivery-auth',persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
     cloudClient.auth.onAuthStateChange((event,session)=>{
       cloudSession=session;
       updateCloudAccountButton();updateConnectionStatus();
-      if(event==='SIGNED_OUT'){syncReady=false;showCloudAuth('Sua sessão foi encerrada.');}
+      if(event==='SIGNED_OUT'){syncReady=false;hideCloudAuth();}
     });
     const {data}=await cloudClient.auth.getSession();
     cloudSession=data.session;
-    if(!cloudSession){showCloudAuth();updateCloudAccountButton();return;}
+    if(!cloudSession){hideCloudAuth();updateCloudAccountButton();updateConnectionStatus();return;}
     try{localStorage.setItem('delivery_last_username',cloudUsername());}catch{}
     if(!navigator.onLine){
       try{cloudWorkspace=JSON.parse(localStorage.getItem('delivery_sync_workspace')||'null');}catch{cloudWorkspace=null;}
       syncReady=Boolean(cloudWorkspace);hideCloudAuth();updateCloudAccountButton();updateConnectionStatus();return;
     }
     try{await connectCloudSession();}
-    catch(err){console.warn(err);showCloudAuth(`Não foi possível conectar ao banco: ${err.message||err}`);}
+    catch(err){console.warn(err);hideCloudAuth();syncRealtimeStatus='ERROR';updateConnectionStatus();}
   }
   async function resumeCloudSync() {
     if(!cloudClient)return initializeCloudSync();
@@ -743,12 +715,12 @@
     $('#connectionDot').className = `connection-dot ${online ? 'online' : 'offline'}`;
     if(!online){
       $('#connectionTitle').textContent=syncQueue.length?`Sem internet • ${syncQueue.length} alteração(ões) pendente(s)`:`Sem internet • ${modeLabel()}`;
-      $('#connectionSubtitle').textContent=cloudSession?'Salvo neste aparelho • sincroniza automaticamente ao reconectar':'Modo offline local • entre na conta quando a internet voltar';
+      $('#connectionSubtitle').textContent=cloudSession?'Salvo neste aparelho • sincroniza automaticamente ao reconectar':'Dados salvos com segurança neste aparelho';
       return;
     }
     if(!cloudSession){
-      $('#connectionTitle').textContent=`Online • login necessário`;
-      $('#connectionSubtitle').textContent='Entre na conta para compartilhar os dados com o celular';
+      $('#connectionTitle').textContent=`Online • ${modeLabel()}`;
+      $('#connectionSubtitle').textContent='Acesso direto • dados salvos neste aparelho';
       return;
     }
     if(syncFlushing||syncQueue.length){
