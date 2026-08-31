@@ -447,18 +447,6 @@ html body .sidebar :where(strong,small,span,a,button),html body #view :where(.he
     </div>
   </div>
 
-  <div id="cloudAuthScreen" class="cloud-auth-screen hidden" aria-hidden="true">
-    <form id="cloudAuthForm" class="cloud-auth-card">
-      <div class="cloud-auth-brand"><div class="brand-mark large">N</div><div><span>ACESSO SEGURO</span><h1>Controle de Entregas</h1><p>Entre com o mesmo usuário do sistema Nilo para sincronizar celular e computador.</p></div></div>
-      <label>Usuário<input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required /></label>
-      <label>Senha<input name="password" type="password" autocomplete="current-password" minlength="6" required /></label>
-      <p class="cloud-auth-message" id="cloudAuthMessage" aria-live="polite"></p>
-      <button type="submit" class="btn primary large-action" id="cloudLoginBtn">Entrar e sincronizar</button>
-      <button type="button" class="btn secondary hidden" id="continueOfflineBtn">Continuar com os dados deste aparelho</button>
-      <small class="cloud-auth-note">Sem internet, os lançamentos ficam salvos neste aparelho e sincronizam automaticamente quando a conexão voltar.</small>
-    </form>
-  </div>
-
   <div class="app-shell" id="appShell" aria-hidden="true">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-top">
@@ -591,7 +579,7 @@ html body .sidebar :where(strong,small,span,a,button),html body #view :where(.he
   <div class="toast-stack" id="toastStack" role="status" aria-live="polite" aria-atomic="true"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4"></script>
-  <script src="app.js?v=14.8.1"></script>
+  <script src="app.js?v=14.8.2"></script>
   <script src="route-view-stable-v19.js?v=19.0.0"></script>
 <script src="route-planner-stable-v24.js?v=24.0.0"></script>
   <script src="operational-fixes-v31.js?v=31.0.0"></script>
