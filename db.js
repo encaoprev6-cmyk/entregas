@@ -1,11 +1,24 @@
 /**
  * db.js — camada de dados offline-first (IndexedDB)
- * Isolada do resto do app: ninguém fora daqui sabe que existe IndexedDB.
- * Todo registro tem: id, createdAt, updatedAt, deletedAt (null = ativo).
+ * Cada escrita relevante gera automaticamente uma linha em auditLog.
+ * "environment" separa Operação Real de Treinamento sem duplicar cadastros.
  */
-const DB_NAME = 'orbita-entregas';
+const DB_NAME = 'orbita-v2';
 const DB_VERSION = 1;
-const STORE = 'deliveries';
+
+const STORES = {
+  deliveries: 'id',
+  vehicles: 'id',
+  drivers: 'id',
+  neighborhoods: 'id',
+  costCategories: 'id',
+  returnReasons: 'id',
+  cycles: 'id',
+  odometerLogs: 'id',
+  costs: 'id',
+  auditLog: 'id',
+  counters: 'key',
+};
 
 let dbPromise = null;
 
@@ -15,12 +28,18 @@ function openDB() {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
-      if (!db.objectStoreNames.contains(STORE)) {
-        const store = db.createObjectStore(STORE, { keyPath: 'id' });
-        store.createIndex('status', 'status', { unique: false });
-        store.createIndex('createdAt', 'createdAt', { unique: false });
-        store.createIndex('deletedAt', 'deletedAt', { unique: false });
-      }
+      Object.entries(STORES).forEach(([name, keyPath]) => {
+        if (!db.objectStoreNames.contains(name)) {
+          const store = db.createObjectStore(name, { keyPath });
+          if (name === 'deliveries') {
+            store.createIndex('status', 'status');
+            store.createIndex('environment', 'environment');
+            store.createIndex('deletedAt', 'deletedAt');
+            store.createIndex('cycleId', 'cycleId');
+          }
+          if (name === 'cycles') store.createIndex('status', 'status');
+        }
+      });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -32,90 +51,188 @@ function tx(storeName, mode) {
   return openDB().then((db) => db.transaction(storeName, mode).objectStore(storeName));
 }
 
-function uid() {
-  return 'd_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+export function uid(prefix = 'id') {
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export const DB = {
-  async add(record) {
-    const store = await tx(STORE, 'readwrite');
-    const now = new Date().toISOString();
-    const full = {
-      id: uid(),
-      createdAt: now,
-      updatedAt: now,
-      deletedAt: null,
-      status: 'pendente',
-      ...record,
-    };
-    return new Promise((resolve, reject) => {
-      const req = store.add(full);
-      req.onsuccess = () => resolve(full);
-      req.onerror = () => reject(req.error);
-    });
-  },
+async function logAudit(entityTable, entityId, action, before, after) {
+  const store = await tx('auditLog', 'readwrite');
+  const entry = {
+    id: uid('aud'),
+    entityTable, entityId, action,
+    before: before ? JSON.parse(JSON.stringify(before)) : null,
+    after: after ? JSON.parse(JSON.stringify(after)) : null,
+    at: new Date().toISOString(),
+  };
+  store.add(entry);
+}
 
-  async update(id, patch) {
-    const store = await tx(STORE, 'readwrite');
-    return new Promise((resolve, reject) => {
-      const getReq = store.get(id);
-      getReq.onsuccess = () => {
-        const existing = getReq.result;
-        if (!existing) return reject(new Error('Registro não encontrado'));
-        const updated = { ...existing, ...patch, updatedAt: new Date().toISOString() };
-        const putReq = store.put(updated);
-        putReq.onsuccess = () => resolve(updated);
-        putReq.onerror = () => reject(putReq.error);
-      };
-      getReq.onerror = () => reject(getReq.error);
-    });
-  },
+function genericStore(name) {
+  return {
+    async all() {
+      const store = await tx(name, 'readonly');
+      return new Promise((res, rej) => {
+        const r = store.getAll();
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+      });
+    },
+    async get(id) {
+      const store = await tx(name, 'readonly');
+      return new Promise((res, rej) => {
+        const r = store.get(id);
+        r.onsuccess = () => res(r.result || null);
+        r.onerror = () => rej(r.error);
+      });
+    },
+    async add(record, keyName = 'id') {
+      const store = await tx(name, 'readwrite');
+      const now = new Date().toISOString();
+      const full = { [keyName]: record[keyName] || uid(name.slice(0, 3)), createdAt: now, updatedAt: now, ...record };
+      return new Promise((res, rej) => {
+        const r = store.add(full);
+        r.onsuccess = async () => { await logAudit(name, full[keyName], 'create', null, full); res(full); };
+        r.onerror = () => rej(r.error);
+      });
+    },
+    async update(id, patch, keyName = 'id') {
+      const store = await tx(name, 'readwrite');
+      return new Promise((res, rej) => {
+        const g = store.get(id);
+        g.onsuccess = () => {
+          const before = g.result;
+          if (!before) return rej(new Error('Registro não encontrado'));
+          const after = { ...before, ...patch, updatedAt: new Date().toISOString() };
+          const p = store.put(after);
+          p.onsuccess = async () => { await logAudit(name, id, 'update', before, after); res(after); };
+          p.onerror = () => rej(p.error);
+        };
+        g.onerror = () => rej(g.error);
+      });
+    },
+    async remove(id) {
+      const store = await tx(name, 'readwrite');
+      return new Promise((res, rej) => {
+        const g = store.get(id);
+        g.onsuccess = () => {
+          const before = g.result;
+          const d = store.delete(id);
+          d.onsuccess = async () => { await logAudit(name, id, 'delete', before, null); res(); };
+          d.onerror = () => rej(d.error);
+        };
+      });
+    },
+    async replaceAll(records) {
+      const store = await tx(name, 'readwrite');
+      return new Promise((res, rej) => {
+        const c = store.clear();
+        c.onsuccess = () => { records.forEach((r) => store.put(r)); res(); };
+        c.onerror = () => rej(c.error);
+      });
+    },
+  };
+}
 
-  async softDelete(id) {
-    return this.update(id, { deletedAt: new Date().toISOString() });
-  },
+/* ---------- deliveries: regras extras (soft delete, status history embutido) ---------- */
+const deliveriesBase = genericStore('deliveries');
 
-  async restore(id) {
-    return this.update(id, { deletedAt: null });
+export const Deliveries = {
+  ...deliveriesBase,
+  async active(environment) {
+    const rows = await deliveriesBase.all();
+    return rows.filter((r) => !r.deletedAt && r.environment === environment);
   },
-
-  async hardDelete(id) {
-    const store = await tx(STORE, 'readwrite');
-    return new Promise((resolve, reject) => {
-      const req = store.delete(id);
-      req.onsuccess = () => resolve();
-      req.onerror = () => reject(req.error);
-    });
+  async trashed(environment) {
+    const rows = await deliveriesBase.all();
+    return rows.filter((r) => !!r.deletedAt && r.environment === environment);
   },
+  async changeStatus(id, newStatus, { reasonId = null, note = '' } = {}) {
+    const before = await deliveriesBase.get(id);
+    const history = before.statusHistory || [];
+    history.push({ from: before.status, to: newStatus, reasonId, note, at: new Date().toISOString() });
+    return deliveriesBase.update(id, { status: newStatus, statusHistory: history });
+  },
+  async reschedule(id, newScheduledAt, reason) {
+    const before = await deliveriesBase.get(id);
+    const list = before.reschedules || [];
+    list.push({ from: before.scheduledAt || null, to: newScheduledAt, reason, at: new Date().toISOString() });
+    return deliveriesBase.update(id, { scheduledAt: newScheduledAt, reschedules: list, type: 'agendada' });
+  },
+  async softDelete(id) { return deliveriesBase.update(id, { deletedAt: new Date().toISOString() }); },
+  async restore(id) { return deliveriesBase.update(id, { deletedAt: null }); },
+};
 
+export const Vehicles = genericStore('vehicles');
+export const Drivers = genericStore('drivers');
+export const Neighborhoods = genericStore('neighborhoods');
+export const CostCategories = genericStore('costCategories');
+export const ReturnReasons = genericStore('returnReasons');
+export const Cycles = genericStore('cycles');
+export const OdometerLogs = genericStore('odometerLogs');
+export const Costs = genericStore('costs');
+
+export const AuditLog = {
   async all() {
-    const store = await tx(STORE, 'readonly');
-    return new Promise((resolve, reject) => {
-      const req = store.getAll();
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
-  },
-
-  async active() {
-    const rows = await this.all();
-    return rows.filter((r) => !r.deletedAt);
-  },
-
-  async trashed() {
-    const rows = await this.all();
-    return rows.filter((r) => !!r.deletedAt);
-  },
-
-  async replaceAll(records) {
-    const store = await tx(STORE, 'readwrite');
-    return new Promise((resolve, reject) => {
-      const clearReq = store.clear();
-      clearReq.onsuccess = () => {
-        records.forEach((r) => store.put(r));
-        resolve();
-      };
-      clearReq.onerror = () => reject(clearReq.error);
+    const store = await tx('auditLog', 'readonly');
+    return new Promise((res, rej) => {
+      const r = store.getAll();
+      r.onsuccess = () => res(r.result.sort((a, b) => b.at.localeCompare(a.at)));
+      r.onerror = () => rej(r.error);
     });
   },
 };
+
+/* ---------- contadores diários (número de compra contínuo / chegada diário) ---------- */
+export const Counters = {
+  async next(environment, kind) {
+    const store = await tx('counters', 'readwrite');
+    const today = new Date().toISOString().slice(0, 10);
+    const key = kind === 'chegada' ? `${environment}:${kind}:${today}` : `${environment}:${kind}`;
+    return new Promise((res, rej) => {
+      const g = store.get(key);
+      g.onsuccess = () => {
+        const current = g.result?.value || 0;
+        const value = current + 1;
+        const p = store.put({ key, value });
+        p.onsuccess = () => res(value);
+        p.onerror = () => rej(p.error);
+      };
+      g.onerror = () => rej(g.error);
+    });
+  },
+};
+
+/* ---------- backup completo (todas as entidades) ---------- */
+export async function exportAll() {
+  const [deliveries, vehicles, drivers, neighborhoods, costCategories, returnReasons, cycles, odometerLogs, costs] = await Promise.all([
+    Deliveries.all(), Vehicles.all(), Drivers.all(), Neighborhoods.all(), CostCategories.all(),
+    ReturnReasons.all(), Cycles.all(), OdometerLogs.all(), Costs.all(),
+  ]);
+  return { version: 1, exportedAt: new Date().toISOString(), deliveries, vehicles, drivers, neighborhoods, costCategories, returnReasons, cycles, odometerLogs, costs };
+}
+
+export async function importAll(data) {
+  await Deliveries.replaceAll(data.deliveries || []);
+  await Vehicles.replaceAll(data.vehicles || []);
+  await Drivers.replaceAll(data.drivers || []);
+  await Neighborhoods.replaceAll(data.neighborhoods || []);
+  await CostCategories.replaceAll(data.costCategories || []);
+  await ReturnReasons.replaceAll(data.returnReasons || []);
+  await Cycles.replaceAll(data.cycles || []);
+  await OdometerLogs.replaceAll(data.odometerLogs || []);
+  await Costs.replaceAll(data.costs || []);
+}
+
+/* ---------- seed inicial (bairros/motivos/categorias padrão) ---------- */
+export async function ensureSeed() {
+  const reasons = await ReturnReasons.all();
+  if (!reasons.length) {
+    const defaults = ['Cliente ausente', 'Endereço errado', 'Cliente recusou', 'Cliente pediu outro dia', 'Produto incorreto', 'Produto avariado', 'Problema no veículo', 'Outros'];
+    for (const label of defaults) await ReturnReasons.add({ label, active: true });
+  }
+  const cats = await CostCategories.all();
+  if (!cats.length) {
+    const defaults = ['Combustível', 'Manutenção', 'Alimentação', 'Pedágio', 'Outros'];
+    for (const name of defaults) await CostCategories.add({ name, active: true });
+  }
+}
