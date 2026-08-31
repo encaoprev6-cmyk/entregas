@@ -1,15 +1,1 @@
-{
-  "name": "Órbita — Controle de Entregas",
-  "short_name": "Órbita",
-  "description": "Controle de entregas completo, offline-first e instalável.",
-  "start_url": "./index.html",
-  "scope": "./",
-  "display": "standalone",
-  "background_color": "#0B2A4A",
-  "theme_color": "#0B2A4A",
-  "orientation": "portrait-primary",
-  "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
-  ]
-}
+{"name":"Controle de Entregas - Nilo","short_name":"Nilo Entregas","description":"No quieto, no quieto, o Nilo vende mais barato.","start_url":"/entregas/","display":"standalone","background_color":"#f4f7fb","theme_color":"#0b2f6b","lang":"en","scope":"/entregas/","orientation":"portrait-primary","icons":[{"src":"icon-192.png","sizes":"192x192","type":"image/png"},{"src":"icon-512.png","sizes":"512x512","type":"image/png"}]}
