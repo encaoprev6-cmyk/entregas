@@ -1,5 +1,9 @@
 # Órbita — Controle de Entregas (v2 completo, client-side)
 
+## Acesso direto (v14.8.2)
+
+A tela de usuário e senha foi removida. O sistema abre diretamente e mantém os dados no aparelho por IndexedDB. Uma sessão de sincronização já existente continua sendo aproveitada enquanto permanecer válida; em um aparelho novo, o uso é local e não compartilha dados automaticamente com outros dispositivos.
+
 ## Como publicar
 Suba **todos os arquivos desta pasta** (incluindo `icons/`) para um repositório GitHub e ative o GitHub Pages na branch `main`, pasta raiz — mesmo processo do app original. Funciona 100% offline (IndexedDB + Service Worker) e é instalável como PWA.
 
